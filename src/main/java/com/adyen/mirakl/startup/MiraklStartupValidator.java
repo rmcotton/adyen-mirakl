@@ -14,9 +14,9 @@ import javax.annotation.Resource;
 import java.util.List;
 
 @Component
-public class StartupValidator implements ApplicationListener<ContextRefreshedEvent> {
+public class MiraklStartupValidator implements ApplicationListener<ContextRefreshedEvent> {
 
-    private final Logger log = LoggerFactory.getLogger(StartupValidator.class);
+    private final Logger log = LoggerFactory.getLogger(MiraklStartupValidator.class);
 
     public enum CustomMiraklFields {
         ADYEN_LEGAL_ENTITY_TYPE ("adyen-legal-entity-type");
@@ -43,9 +43,9 @@ public class StartupValidator implements ApplicationListener<ContextRefreshedEve
             .map(AbstractMiraklAdditionalField::getCode)
             .anyMatch(customFieldName -> CustomMiraklFields.ADYEN_LEGAL_ENTITY_TYPE.toString().equalsIgnoreCase(customFieldName));
         if(startupSuccess){
-            log.info(String.format("Startup validation succeeded, custom field found: [%s]", CustomMiraklFields.ADYEN_LEGAL_ENTITY_TYPE.toString()));
+            log.info(String.format("Startup Mirakl validation succeeded, custom field found: [%s]", CustomMiraklFields.ADYEN_LEGAL_ENTITY_TYPE.toString()));
         }else {
-            throw new IllegalStateException(String.format("Startup validation failed, unable to find custom field: [%s]", CustomMiraklFields.ADYEN_LEGAL_ENTITY_TYPE.toString()));
+            throw new IllegalStateException(String.format("Startup Mirkal validation failed, unable to find custom field: [%s]", CustomMiraklFields.ADYEN_LEGAL_ENTITY_TYPE.toString()));
         }
     }
 

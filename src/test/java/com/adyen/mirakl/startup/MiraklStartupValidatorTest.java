@@ -16,10 +16,10 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class StartupValidatorTest {
+public class MiraklStartupValidatorTest {
 
     @InjectMocks
-    private StartupValidator testObj;
+    private MiraklStartupValidator testObj;
 
     @Mock
     private MiraklMarketplacePlatformOperatorApiClient miraklMarketplacePlatformOperatorApiClientMock;
@@ -36,7 +36,7 @@ public class StartupValidatorTest {
     public void startupSuccess() {
         when(miraklMarketplacePlatformOperatorApiClientMock.getAdditionalFields(any(com.mirakl.client.mmp.operator.request.additionalfield.MiraklGetAdditionalFieldRequest.class))).thenReturn(ImmutableList.of(miraklFrontOperatorAdditionalFieldMock1, miraklFrontOperatorAdditionalFieldMock2));
         when(miraklFrontOperatorAdditionalFieldMock1.getCode()).thenReturn("nonValidCode");
-        when(miraklFrontOperatorAdditionalFieldMock2.getCode()).thenReturn(StartupValidator.CustomMiraklFields.ADYEN_LEGAL_ENTITY_TYPE.toString());
+        when(miraklFrontOperatorAdditionalFieldMock2.getCode()).thenReturn(MiraklStartupValidator.CustomMiraklFields.ADYEN_LEGAL_ENTITY_TYPE.toString());
 
         testObj.onApplicationEvent(eventMock);
     }

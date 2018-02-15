@@ -117,3 +117,42 @@ adyenConfig:
     password: ${ADYEN_PASS}
     environment: ${ADYEN_ENV}
     appName: ${ADYEN_APP_NAME}
+
+
+adyenNotificationsConfig:
+    notificationConfigurationDetails:
+        - configurationDetails:
+            active: TRUE
+            description: description
+            messageFormat: JSON
+            notifyUrl: https://requestb.in/133ann61
+            eventConfigs:
+                - eventType: ACCOUNT_CREATED
+                  includeMode: INCLUDE
+                - eventType: ACCOUNT_HOLDER_CREATED
+                  includeMode: INCLUDE
+                - eventType: ACCOUNT_HOLDER_LIMIT_REACHED
+                  includeMode: INCLUDE
+                - eventType: ACCOUNT_HOLDER_PAYOUT
+                  includeMode: INCLUDE
+                - eventType: ACCOUNT_HOLDER_STATUS_CHANGE
+                  includeMode: INCLUDE
+                - eventType: ACCOUNT_HOLDER_UPDATED
+                  includeMode: INCLUDE
+                - eventType: ACCOUNT_HOLDER_VERIFICATION
+                  includeMode: INCLUDE
+                - eventType: ACCOUNT_UPDATED
+                  includeMode: INCLUDE
+                - eventType: BENEFICIARY_SETUP
+                  includeMode: INCLUDE
+                - eventType: COMPENSATE_NEGATIVE_BALANCE
+                  includeMode: INCLUDE
+                - eventType: PAYMENT_FAILURE
+                  includeMode: INCLUDE
+                - eventType: REPORT_AVAILABLE
+                  includeMode: INCLUDE
+                - eventType: SCHEDULED_REFUNDS
+                  includeMode: INCLUDE
+                - eventType: TRANSFER_FUNDS
+                  includeMode: INCLUDE
+      
