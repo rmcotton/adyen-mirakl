@@ -106,6 +106,7 @@ jhipster:
 # ===================================================================
 
 application:
+    shopUpdaterCron: 0 * * * * ?
 
 miraklOperator:
     miraklEnvUrl: ${MIRAKL_ENV_URL}

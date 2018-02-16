@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,7 +59,7 @@ public class ShopService {
      * <p>
      * This is scheduled to get fired everyday, at 01:00 (am).
      */
-    @Scheduled(cron = "0 * * * * ?")
+    @Scheduled(cron = "${application.shopUpdaterCron}")
     public void retrievedUpdatedShops() {
         MiraklShops miraklShops = getUpdatedShops();
         Account adyenAccountService = adyenConfiguration.createAccountService();
