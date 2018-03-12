@@ -144,7 +144,10 @@ public class ShopServiceTest {
         MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue additionalField = new MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue();
         additionalField.setCode(String.valueOf(MiraklStartupValidator.CustomMiraklFields.ADYEN_LEGAL_ENTITY_TYPE));
         additionalField.setValue(MiraklStartupValidator.AdyenLegalEntityType.INDIVIDUAL.toString());
-        setup(ImmutableList.of(additionalField));
+        MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue additionalFieldDob = new MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue();
+        additionalFieldDob.setCode("adyen-individual-dob");
+        additionalFieldDob.setValue("1989-03-15T23:00:00Z");
+        setup(ImmutableList.of(additionalField, additionalFieldDob));
         when(adyenAccountServiceMock.createAccountHolder(createAccountHolderRequestCaptor.capture())).thenReturn(null);
         when(getAccountHolderResponseMock.getAccountHolderCode()).thenReturn("");
 
@@ -180,7 +183,7 @@ public class ShopServiceTest {
         Assertions.assertThat(bankDetails.getIban()).isEqualTo("GB00IBAN");
         Assertions.assertThat(bankDetails.getCurrencyCode()).isEqualTo("EUR");
         Assertions.assertThat(bankDetails.getBankCity()).isEqualTo("bankCity");
-
+        Assertions.assertThat(individualDetails.getPersonalData().getDateOfBirth()).isEqualTo("1989-03-15T23:00:00Z");
     }
 
     @Test

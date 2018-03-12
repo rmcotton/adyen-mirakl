@@ -230,6 +230,17 @@ public class ShopService {
     private IndividualDetails createIndividualDetailsFromShop(MiraklShop shop) {
         IndividualDetails individualDetails = new IndividualDetails();
 
+        shop.getAdditionalFieldValues().stream()
+            .filter(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::isInstance)
+            .map(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::cast)
+            .filter(fieldValue -> "adyen-individual-dob".equals(fieldValue.getCode()))
+            .findAny().ifPresent(value-> {
+                PersonalData personalData = new PersonalData();
+                personalData.setDateOfBirth(value.getValue());
+                individualDetails.setPersonalData(personalData);
+            }
+        );
+
         MiraklContactInformation contactInformation = getContactInformationFromShop(shop);
 
         Name name = new Name();
