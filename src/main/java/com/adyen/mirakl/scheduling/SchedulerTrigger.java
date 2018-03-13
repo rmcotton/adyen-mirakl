@@ -21,7 +21,7 @@ public class SchedulerTrigger {
 
     @Scheduled(cron = "${application.shopUpdaterCron}")
     public void runShopUpdates(){
-        shopService.retrieveUpdatedShops();
+        shopService.processUpdatedShops();
     }
 
     @Scheduled(cron = "${application.emailRetryCron}")

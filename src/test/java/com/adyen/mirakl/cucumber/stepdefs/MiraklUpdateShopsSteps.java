@@ -4,7 +4,6 @@ import com.adyen.mirakl.cucumber.stepdefs.helpers.stepshelper.StepDefsHelper;
 import com.mirakl.client.mmp.domain.shop.MiraklShop;
 import com.mirakl.client.mmp.operator.domain.shop.create.MiraklCreatedShops;
 import cucumber.api.DataTable;
-import cucumber.api.PendingException;
 import cucumber.api.java.en.And;
 import cucumber.api.java.en.When;
 
@@ -68,7 +67,7 @@ public class MiraklUpdateShopsSteps extends StepDefsHelper {
         MiraklShop createdShop = (MiraklShop) cucumberMap.get("createdShop");
         rows().forEach(row -> {
             miraklUpdateShopApi.updateExistingShopsContactInfoWithTableData(createdShop, createdShop.getId(), miraklMarketplacePlatformOperatorApiClient, row);
-            shopService.retrieveUpdatedShops();
+            shopService.processUpdatedShops();
         });
     }
 }

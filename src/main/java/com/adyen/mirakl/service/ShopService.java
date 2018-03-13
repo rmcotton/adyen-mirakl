@@ -46,7 +46,7 @@ public class ShopService {
     @Value("${shopService.maxUbos}")
     private Integer maxUbos = 4;
 
-    public void retrieveUpdatedShops() {
+    public void processUpdatedShops() {
         final ZonedDateTime beforeProcessing = ZonedDateTime.now();
 
         List<MiraklShop> shops = getUpdatedShops();
@@ -77,6 +77,7 @@ public class ShopService {
 
     private void processUpdateAccountHolder(final MiraklShop shop, final GetAccountHolderResponse getAccountHolderResponse) throws Exception {
         Optional<UpdateAccountHolderRequest> updateAccountHolderRequest = updateAccountHolderRequestFromShop(shop, getAccountHolderResponse);
+        updateAccountHolderRequest = updateAccountHolderRequest.flatMap(x -> addBankDetails(x, shop));
         if(updateAccountHolderRequest.isPresent()){
             UpdateAccountHolderResponse response = adyenAccountService.updateAccountHolder(updateAccountHolderRequest.get());
             log.debug("UpdateAccountHolderResponse: {}", response);
@@ -87,6 +88,13 @@ public class ShopService {
                 log.debug("DeleteBankAccountResponse: {}", deleteBankAccountResponse);
             }
         }
+    }
+
+    private Optional<UpdateAccountHolderRequest> addBankDetails(final UpdateAccountHolderRequest updateRequest, MiraklShop shop) {
+        final AccountHolderDetails accountHolderDetails = Optional.ofNullable(updateRequest.getAccountHolderDetails()).orElseGet(AccountHolderDetails::new);
+        accountHolderDetails.setBusinessDetails(addBusinessDetailsFromShop(shop));
+        updateRequest.setAccountHolderDetails(accountHolderDetails);
+        return Optional.of(updateRequest);
     }
 
     /**
@@ -143,7 +151,7 @@ public class ShopService {
             IndividualDetails individualDetails = createIndividualDetailsFromShop(shop);
             accountHolderDetails.setIndividualDetails(individualDetails);
         } else if (LegalEntityEnum.BUSINESS.equals(legalEntity)) {
-            BusinessDetails businessDetails = createBusinessDetailsFromShop(shop);
+            BusinessDetails businessDetails = addBusinessDetailsFromShop(shop);
             accountHolderDetails.setBusinessDetails(businessDetails);
         } else {
             throw new IllegalArgumentException(legalEntity.toString() + " not supported");
@@ -192,7 +200,7 @@ public class ShopService {
         return null;
     }
 
-    private BusinessDetails createBusinessDetailsFromShop(final MiraklShop shop) {
+    private BusinessDetails addBusinessDetailsFromShop(final MiraklShop shop) {
         BusinessDetails businessDetails = new BusinessDetails();
 
         if (shop.getProfessionalInformation() != null) {
@@ -203,7 +211,6 @@ public class ShopService {
                 businessDetails.setTaxId(shop.getProfessionalInformation().getTaxIdentificationNumber());
             }
         }
-
         businessDetails.setShareholders(ShopUtil.extractUbos(shop, maxUbos));
         return businessDetails;
     }

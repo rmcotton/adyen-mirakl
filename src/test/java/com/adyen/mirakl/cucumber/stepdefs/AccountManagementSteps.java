@@ -29,7 +29,7 @@ public class AccountManagementSteps extends StepDefsHelper {
 
     @Then("^we process the data and push to Adyen$")
     public void adyenWillProcessTheData() {
-        shopService.retrieveUpdatedShops();
+        shopService.processUpdatedShops();
     }
 
     @And("^an AccountHolder will be created in Adyen with status Active$")
