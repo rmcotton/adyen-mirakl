@@ -4,6 +4,7 @@ import com.adyen.mirakl.cucumber.stepdefs.helpers.stepshelper.StepDefsHelper;
 import com.mirakl.client.mmp.domain.common.MiraklAdditionalFieldValue;
 import com.mirakl.client.mmp.domain.shop.MiraklShop;
 import cucumber.api.DataTable;
+import cucumber.api.java.en.And;
 import cucumber.api.java.en.Given;
 import cucumber.api.java.en.Then;
 import cucumber.api.java.en.When;
@@ -12,7 +13,7 @@ import org.assertj.core.api.Assertions;
 import java.util.List;
 import java.util.Map;
 
-import static com.adyen.mirakl.cucumber.stepdefs.helpers.hooks.CucumberHooks.*;
+import static org.awaitility.Awaitility.await;
 
 public class MiraklShopSteps extends StepDefsHelper {
 
@@ -50,7 +51,6 @@ public class MiraklShopSteps extends StepDefsHelper {
 
         this.seller = shopConfiguration.shopIds.get(rows.get(0).get("seller").toString()).toString();
         miraklShop = getMiraklShop(miraklMarketplacePlatformOperatorApiClient, seller);
-        cucumberMap.put("createdShop", miraklShop);
 
         Assertions.assertThat(miraklShop.getId()).isEqualTo(this.seller);
         rows.forEach(row-> {
@@ -58,6 +58,25 @@ public class MiraklShopSteps extends StepDefsHelper {
             Assertions.assertThat(row.get("lastName")).isEqualTo(miraklShop.getContactInformation().getLastname());
             Assertions.assertThat(row.get("postCode")).isEqualTo(miraklShop.getContactInformation().getZipCode());
             Assertions.assertThat(row.get("city")).isEqualTo(miraklShop.getContactInformation().getCity());
+        });
+    }
+
+    @When("^the Mirakl Shop Details have been updated as the same as before$")
+    public void theMiraklShopDetailsHaveBeenUpdatedAsTheSameAsBefore(DataTable table) {
+        List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
+        cucumberTable.forEach(row ->
+           miraklShop = miraklUpdateShopApi
+                .updateExistingShopsContactInfoWithTableData(miraklShop, miraklShop.getId(), miraklMarketplacePlatformOperatorApiClient, row)
+        );
+    }
+
+    @And("^a notification of (.*) will not be sent$")
+    public void aNotificationOfACCOUNT_HOLDER_UPDATEDWillNotBeSent(String notification) {
+        waitForNotification();
+        await().untilAsserted(() -> {
+            Map<String, Object> response = restAssuredAdyenApi
+                .getAdyenNotificationBody(startUpCucumberHook.getBaseRequestBinUrlPath(), miraklShop.getId(), notification, null);
+            Assertions.assertThat(response).isNull();
         });
     }
 }

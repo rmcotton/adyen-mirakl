@@ -16,14 +16,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.adyen.mirakl.cucumber.stepdefs.helpers.hooks.CucumberHooks.cucumberMap;
-
 @Service
 public class AssertionHelper {
 
     private static final Map<String, String> CIVILITY_TO_GENDER = ImmutableMap.<String, String>builder().put("Mr", "MALE")
         .put("Mrs", "FEMALE")
         .put("Miss", "FEMALE").build();
+
+    private DocumentContext parsedBankAccountDetail;
 
     public ImmutableList.Builder<String> adyenAccountDataBuilder(DocumentContext notificationResponse) {
         ImmutableList.Builder<String> adyenShopData = new ImmutableList.Builder<>();
@@ -51,28 +51,26 @@ public class AssertionHelper {
         return adyenShopData;
     }
 
-    public ImmutableList.Builder<String> adyenBankAccountDetail(List<Map<Object, Object>> bankAccountDetails) {
+    public ImmutableList.Builder<String> adyenBankAccountDetail(List<Map<Object, Object>> bankAccountDetails, List<Map <String, String>> rows) {
         Map bankAccountDetail = new HashMap();
-        // if more than one bankAccountDetail is returned then we need to check if the one we care about it there
+        // if more than one bankAccountDetail is returned then we need to check if the one we care about is there
         if (bankAccountDetails.size() > 1) {
             for (Map jsonArray : bankAccountDetails) {
                 String iban = JsonPath.parse(jsonArray).read("BankAccountDetail.iban").toString();
-                if (iban.equals(cucumberMap.get("iban").toString())){
+                if (iban.equals(rows.get(0).get("iban"))){
                     bankAccountDetail = (Map) jsonArray.get("BankAccountDetail");
                 }
             }
         } else {
             bankAccountDetail = (Map) bankAccountDetails.get(0).get("BankAccountDetail");
         }
+
         ImmutableList.Builder<String> adyenShopData = new ImmutableList.Builder<>();
 
-        DocumentContext parsedBankAccountDetail = JsonPath.parse(bankAccountDetail);
+        parsedBankAccountDetail = JsonPath.parse(bankAccountDetail);
         adyenShopData.add(parsedBankAccountDetail.read("iban").toString());
         adyenShopData.add(parsedBankAccountDetail.read("bankBicSwift").toString());
         adyenShopData.add(parsedBankAccountDetail.read("ownerName").toString());
-
-        // we'll use this for more assertions in calling method
-        cucumberMap.put("bankAccountDetail", parsedBankAccountDetail);
 
         return adyenShopData;
     }
@@ -136,5 +134,9 @@ public class AssertionHelper {
             .orElse("");
         miraklShopData.add(element);
         return miraklShopData;
+    }
+
+    public DocumentContext getParsedBankAccountDetail() {
+        return parsedBankAccountDetail;
     }
 }

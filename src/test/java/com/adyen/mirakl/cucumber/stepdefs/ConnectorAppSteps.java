@@ -1,10 +1,13 @@
 package com.adyen.mirakl.cucumber.stepdefs;
 
+import com.adyen.mirakl.cucumber.stepdefs.helpers.stepshelper.StepDefsHelper;
 import com.adyen.mirakl.web.rest.MiraklNotificationsResource;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import cucumber.api.DataTable;
 import cucumber.api.java.Before;
+import cucumber.api.java.en.And;
+import cucumber.api.java.en.Then;
 import cucumber.api.java.en.When;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
@@ -18,7 +21,7 @@ import java.util.Map;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-public class ConnectorAppSteps extends StepDefs {
+public class ConnectorAppSteps extends StepDefsHelper {
 
     @Autowired
     private MiraklNotificationsResource miraklNotificationsResource;
@@ -43,4 +46,15 @@ public class ConnectorAppSteps extends StepDefs {
             .file(mockMultipartFile))
             .andExpect(status().is(200));
     }
+
+    @Then("^we process the data and push to Adyen$")
+    public void adyenWillProcessTheData() {
+        shopService.processUpdatedShops();
+    }
+
+    @And("^we process the document data and push to Adyen$")
+    public void weProcessTheDocumentDataAndPushToAdyen() {
+        docService.retrieveBankproofAndUpload();
+    }
+
 }

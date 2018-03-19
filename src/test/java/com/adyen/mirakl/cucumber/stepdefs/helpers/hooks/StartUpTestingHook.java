@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import io.restassured.RestAssured;
 import io.restassured.response.ResponseBody;
 
+
 @Component
 @ConfigurationProperties(prefix = "requestbin", ignoreUnknownFields = false)
 public class StartUpTestingHook implements ApplicationListener<ContextRefreshedEvent> {
@@ -75,16 +76,28 @@ public class StartUpTestingHook implements ApplicationListener<ContextRefreshedE
         configurationDetails.setActive(true);
         configurationDetails.description(baseRequestbinUrl);
         // Event Configs
-        configurationDetails.setEventConfigs(ImmutableList.of(notificationEventConfiguration(NotificationEventConfiguration.EventTypeEnum.ACCOUNT_HOLDER_CREATED,
-                                                                                             NotificationEventConfiguration.IncludeModeEnum.INCLUDE),
-                                                              notificationEventConfiguration(NotificationEventConfiguration.EventTypeEnum.ACCOUNT_HOLDER_VERIFICATION,
-                                                                                             NotificationEventConfiguration.IncludeModeEnum.INCLUDE),
-                                                              notificationEventConfiguration(NotificationEventConfiguration.EventTypeEnum.ACCOUNT_HOLDER_UPDATED,
-                                                                                             NotificationEventConfiguration.IncludeModeEnum.INCLUDE),
-                                                              notificationEventConfiguration(NotificationEventConfiguration.EventTypeEnum.ACCOUNT_HOLDER_PAYOUT,
-                                                                                             NotificationEventConfiguration.IncludeModeEnum.INCLUDE),
-                                                              notificationEventConfiguration(NotificationEventConfiguration.EventTypeEnum.ACCOUNT_HOLDER_STATUS_CHANGE,
-                                                                                             NotificationEventConfiguration.IncludeModeEnum.INCLUDE)));
+        configurationDetails.setEventConfigs(ImmutableList.of(
+            notificationEventConfiguration(
+                NotificationEventConfiguration.EventTypeEnum.ACCOUNT_HOLDER_CREATED,
+                NotificationEventConfiguration.IncludeModeEnum.INCLUDE
+            ),
+            notificationEventConfiguration(
+                NotificationEventConfiguration.EventTypeEnum.ACCOUNT_HOLDER_VERIFICATION,
+                NotificationEventConfiguration.IncludeModeEnum.INCLUDE
+            ),
+            notificationEventConfiguration(
+                NotificationEventConfiguration.EventTypeEnum.ACCOUNT_HOLDER_UPDATED,
+                NotificationEventConfiguration.IncludeModeEnum.INCLUDE
+            ),
+            notificationEventConfiguration(
+                NotificationEventConfiguration.EventTypeEnum.ACCOUNT_HOLDER_PAYOUT,
+                NotificationEventConfiguration.IncludeModeEnum.INCLUDE
+            ),
+            notificationEventConfiguration(
+                NotificationEventConfiguration.EventTypeEnum.ACCOUNT_HOLDER_STATUS_CHANGE,
+                NotificationEventConfiguration.IncludeModeEnum.INCLUDE
+            )
+        ));
 
         configurationDetails.messageFormat(NotificationConfigurationDetails.MessageFormatEnum.JSON);
         configurationDetails.setNotifyURL(baseRequestbinUrl);

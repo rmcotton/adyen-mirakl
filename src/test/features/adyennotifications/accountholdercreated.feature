@@ -13,7 +13,7 @@ Feature: Seller Account Management
 
     @ADY-53
     Scenario: Creating new shop as Business with all shareholders will create new Account Holder in adyen
-        Given a new shop has been created in Mirakl for a Business
+        Given a new shop has been created in Mirakl with UBO Data for a Business
             | maxUbos | lastName |
             | 4       | TestData |
         And we process the data and push to Adyen
@@ -23,9 +23,9 @@ Feature: Seller Account Management
             | maxUbos |
             | 4       |
 
-    @ADY-53 @ADY-91 @bug
+    @ADY-53 @ADY-91
     Scenario: Creating new shop as Business with 1 shareholder and updating shop with 3 shareholder details
-        Given a new shop has been created in Mirakl for a Business
+        Given a new shop has been created in Mirakl with UBO Data for a Business
             | maxUbos | lastName |
             | 1       | TestData |
         And we process the data and push to Adyen
@@ -40,8 +40,8 @@ Feature: Seller Account Management
 
     @ADY-53
     Scenario: Don't create Adyen Account Holder if no shareholder data has been entered
-        When a new shop has been created in Mirakl for a Business
+        Given a new shop has been created in Mirakl for a Business
             | lastName |
             | TestData |
-        When a complete shareholder is not provided
+        When we process the data and push to Adyen
         Then no account holder is created in Adyen

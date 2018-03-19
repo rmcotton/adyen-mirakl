@@ -3,7 +3,7 @@ Feature: Identity verification check
 
     @ADY-18
     Scenario: Mandatory shareholder data is passed to Adyen to perform KYC Identity Check
-        Given a new shop has been created in Mirakl for a Business
+        Given a new shop has been created in Mirakl with UBO Data for a Business
             | maxUbos | lastName |
             | 4       | testData |
         And we process the data and push to Adyen
@@ -11,7 +11,7 @@ Feature: Identity verification check
 
     @ADY-18
     Scenario: Mandatory shareholder data is updated and sent to Adyen to re-perform KYC Identity Check
-        Given a new shop has been created in Mirakl for a Business
+        Given a new shop has been created in Mirakl with UBO Data for a Business
             | maxUbos | lastName |
             | 4       | testData |
         And we process the data and push to Adyen

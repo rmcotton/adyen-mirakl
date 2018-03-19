@@ -62,6 +62,13 @@ public class MiraklShopApi extends MiraklShopProperties {
         return createMiraklShopRequest(client, miraklCreateShopBuilder);
     }
 
+    public MiraklCreatedShops createBusinessShopWithNoUBOs(MiraklMarketplacePlatformOperatorApiClient client, List<Map<String, String>> rows, String legalEntity) {
+        MiraklCreateShop miraklCreateShop = new MiraklCreateShop();
+        miraklCreateShop = populateMiraklShop(rows, legalEntity, miraklCreateShop);
+        ImmutableList.Builder<MiraklCreateShop> miraklCreateShopBuilder = miraklShopCreateBuilder(miraklCreateShop);
+        return createMiraklShopRequest(client, miraklCreateShopBuilder);
+    }
+
     // Mandatory for any type of shop creation
     public MiraklCreateShop populateMiraklShop(List<Map<String, String>> rows, String legalEntity, MiraklCreateShop miraklCreateShop){
         populateMiraklAddress(rows, miraklCreateShop);

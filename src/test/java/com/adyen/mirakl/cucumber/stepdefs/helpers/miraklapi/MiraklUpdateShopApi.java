@@ -48,7 +48,7 @@ public class MiraklUpdateShopApi extends MiraklUpdateShopProperties {
         return updateMiraklRequest(client, miraklUpdateShopBuilder);
     }
 
-    public void updateExistingShopsContactInfoWithTableData(MiraklShop miraklShop, String shopId, MiraklMarketplacePlatformOperatorApiClient client, Map<String, String> row) {
+    public MiraklShop updateExistingShopsContactInfoWithTableData(MiraklShop miraklShop, String shopId, MiraklMarketplacePlatformOperatorApiClient client, Map<String, String> row) {
         MiraklUpdateShop miraklUpdateShop = new MiraklUpdateShop();
         miraklUpdateShop = populateAllMandatoryFields(miraklShop, shopId, miraklUpdateShop);
 
@@ -57,7 +57,7 @@ public class MiraklUpdateShopApi extends MiraklUpdateShopProperties {
         miraklUpdateShop.setAddress(address);
 
         ImmutableList.Builder<MiraklUpdateShop> miraklUpdateShopBuilder = miraklUpdateShopBuilder(miraklUpdateShop);
-        updateMiraklRequest(client, miraklUpdateShopBuilder);
+        return updateMiraklRequest(client, miraklUpdateShopBuilder);
     }
 
     public MiraklShop updateShopToIncludeVATNumber(MiraklShop miraklShop, String shopId, MiraklMarketplacePlatformOperatorApiClient client) {

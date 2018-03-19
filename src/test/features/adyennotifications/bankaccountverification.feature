@@ -16,8 +16,8 @@ Feature: Bank Account Verification
             | PASSED | RBS       | GB26TEST40051512347366 | TestData      | TestData |
         When we process the data and push to Adyen
         Then a new bankAccountDetail will be created for the existing Account Holder
-            | eventType              |
-            | ACCOUNT_HOLDER_CREATED |
+            | eventType              | iban                   |
+            | ACCOUNT_HOLDER_CREATED | GB26TEST40051512347366 |
 
     @ADY-8 @ADY-71 @ADY-84
     Scenario: New BankAccountDetail is created for Account Holder upon new IBAN entry in Mirakl for an existing Adyen accountHolder
@@ -42,8 +42,8 @@ Feature: Bank Account Verification
             | GB26TEST40051512393150 |
         And we process the data and push to Adyen
         Then a new bankAccountDetail will be created for the existing Account Holder
-            | eventType              |
-            | ACCOUNT_HOLDER_UPDATED |
+            | eventType              | iban                   |
+            | ACCOUNT_HOLDER_UPDATED | GB26TEST40051512393150 |
 
     @ADY-15 @ADY-89
     Scenario: Seller uploads Bank Statement Mirakl to fulfil BANK_ACCOUNT_VERIFICATION in Adyen

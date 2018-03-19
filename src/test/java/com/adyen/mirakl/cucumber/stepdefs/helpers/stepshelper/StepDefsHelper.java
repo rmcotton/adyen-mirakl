@@ -10,7 +10,6 @@ import com.adyen.mirakl.cucumber.stepdefs.helpers.restassured.RestAssuredAdyenAp
 import com.adyen.mirakl.service.DocService;
 import com.adyen.mirakl.service.ShopService;
 import com.adyen.service.Account;
-import com.mirakl.client.mmp.domain.shop.AbstractMiraklShop;
 import com.mirakl.client.mmp.domain.shop.MiraklShop;
 import com.mirakl.client.mmp.domain.shop.MiraklShops;
 import com.mirakl.client.mmp.operator.core.MiraklMarketplacePlatformOperatorApiClient;
@@ -55,6 +54,8 @@ public class StepDefsHelper {
     protected MiraklUpdateShopApi miraklUpdateShopApi;
     @Resource
     protected MailTrapConfiguration mailTrapConfiguration;
+    @Resource
+    protected Map<String, Object> cucumberMap;
 
     protected void waitForNotification() {
         await().atMost(new Duration(30, TimeUnit.MINUTES)).untilAsserted(() -> {
@@ -93,11 +94,8 @@ public class StepDefsHelper {
             .orElseThrow(() -> new IllegalStateException("Cannot find shop"));
     }
 
-    protected String retrieveShopIdFromCreatedShop(MiraklCreatedShops createdShops) {
-        return createdShops.getShopReturns()
-            .stream()
-            .map(MiraklCreatedShopReturn::getShopCreated)
-            .map(AbstractMiraklShop::getId)
-            .findFirst().orElse(null);
+    protected MiraklShop retrieveCreatedShop(MiraklCreatedShops shopForIndividualWithBankDetails) {
+        return shopForIndividualWithBankDetails.getShopReturns()
+            .stream().map(MiraklCreatedShopReturn::getShopCreated).findFirst().orElse(null);
     }
 }
