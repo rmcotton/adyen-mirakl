@@ -1,10 +1,40 @@
 package com.adyen.mirakl.service;
 
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import javax.annotation.Resource;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import com.adyen.mirakl.startup.MiraklStartupValidator;
 import com.adyen.model.Address;
 import com.adyen.model.Name;
-import com.adyen.model.marketpay.*;
+import com.adyen.model.marketpay.AccountHolderDetails;
+import com.adyen.model.marketpay.BankAccountDetail;
+import com.adyen.model.marketpay.BusinessDetails;
+import com.adyen.model.marketpay.CreateAccountHolderRequest;
 import com.adyen.model.marketpay.CreateAccountHolderRequest.LegalEntityEnum;
+import com.adyen.model.marketpay.CreateAccountHolderResponse;
+import com.adyen.model.marketpay.DeleteBankAccountRequest;
+import com.adyen.model.marketpay.DeleteBankAccountResponse;
+import com.adyen.model.marketpay.ErrorFieldType;
+import com.adyen.model.marketpay.GetAccountHolderRequest;
+import com.adyen.model.marketpay.GetAccountHolderResponse;
+import com.adyen.model.marketpay.IndividualDetails;
+import com.adyen.model.marketpay.PersonalData;
+import com.adyen.model.marketpay.UpdateAccountHolderRequest;
+import com.adyen.model.marketpay.UpdateAccountHolderResponse;
 import com.adyen.service.Account;
 import com.adyen.service.exception.ApiException;
 import com.mirakl.client.mmp.domain.additionalfield.MiraklAdditionalFieldType;
@@ -16,18 +46,6 @@ import com.mirakl.client.mmp.domain.shop.MiraklShops;
 import com.mirakl.client.mmp.domain.shop.bank.MiraklIbanBankAccountInformation;
 import com.mirakl.client.mmp.operator.core.MiraklMarketplacePlatformOperatorApiClient;
 import com.mirakl.client.mmp.request.shop.MiraklGetShopsRequest;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
-
-import javax.annotation.Resource;
-import java.time.ZonedDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -49,6 +67,9 @@ public class ShopService {
 
     @Resource
     private UboService uboService;
+
+    @Resource
+    private InvalidFieldsNotificationService invalidFieldsNotificationService;
 
     @Value("${shopService.maxUbos}")
     private Integer maxUbos = 4;
@@ -83,7 +104,8 @@ public class ShopService {
         log.debug("CreateAccountHolderResponse: {}", response);
         if (! CollectionUtils.isEmpty(response.getInvalidFields())) {
             final String invalidFields = response.getInvalidFields().stream().map(ErrorFieldType::toString).collect(Collectors.joining(","));
-            log.warn("Invalid fields when trying to create a shop: {}", invalidFields);
+            log.warn("Invalid fields when trying to create shop {}: {}", shop.getId(), invalidFields);
+            invalidFieldsNotificationService.handleErrorsInResponse(shop, response.getInvalidFields());
         }
     }
 
@@ -93,9 +115,11 @@ public class ShopService {
         UpdateAccountHolderResponse response = adyenAccountService.updateAccountHolder(updateAccountHolderRequest);
         shareholderMappingService.updateShareholderMapping(response);
         log.debug("UpdateAccountHolderResponse: {}", response);
-        if(!CollectionUtils.isEmpty(response.getInvalidFields())){
+
+        if (! CollectionUtils.isEmpty(response.getInvalidFields())) {
             final String invalidFields = response.getInvalidFields().stream().map(ErrorFieldType::toString).collect(Collectors.joining(","));
-            log.warn("Invalid fields when trying to create a shop: {}", invalidFields);
+            log.warn("Invalid fields when trying to update shop {}: {}", shop.getId(), invalidFields);
+            invalidFieldsNotificationService.handleErrorsInResponse(shop, response.getInvalidFields());
         }
 
         // if IBAN has changed remove the old one
@@ -103,9 +127,7 @@ public class ShopService {
             DeleteBankAccountResponse deleteBankAccountResponse = adyenAccountService.deleteBankAccount(deleteBankAccountRequest(getAccountHolderResponse));
             log.debug("DeleteBankAccountResponse: {}", deleteBankAccountResponse);
         }
-
     }
-
 
 
     /**
@@ -234,16 +256,17 @@ public class ShopService {
     private IndividualDetails createIndividualDetailsFromShop(MiraklShop shop) {
         IndividualDetails individualDetails = new IndividualDetails();
 
-        shop.getAdditionalFieldValues().stream()
+        shop.getAdditionalFieldValues()
+            .stream()
             .filter(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::isInstance)
             .map(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::cast)
             .filter(fieldValue -> "adyen-individual-dob".equals(fieldValue.getCode()))
-            .findAny().ifPresent(value-> {
+            .findAny()
+            .ifPresent(value -> {
                 PersonalData personalData = new PersonalData();
                 personalData.setDateOfBirth(value.getValue());
                 individualDetails.setPersonalData(personalData);
-            }
-        );
+            });
 
         MiraklContactInformation contactInformation = getContactInformationFromShop(shop);
 

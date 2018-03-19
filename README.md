@@ -101,4 +101,18 @@ To configure CI for your project, run the ci-cd sub-generator (`jhipster ci-cd`)
 [Running tests page]: http://www.jhipster.tech/documentation-archive/v4.14.0/running-tests/
 [Setting up Continuous Integration]: http://www.jhipster.tech/documentation-archive/v4.14.0/setting-up-ci/
 
+## Local mail testing
 
+To use a local mailcatcher (on systems that "nc" is installed):
+    
+```
+export MAIL_HOST=localhost
+export MAIL_PORT=8025
+export MAIL_USER=any
+export MAIL_PASS=any
+```
+
+and run:
+
+    src/test/resources/scripts/smtp_nc.sh
+    

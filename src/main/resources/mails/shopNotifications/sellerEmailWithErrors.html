@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="'Account verification'"></title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="shortcut icon" th:href="@{|${baseUrl}/favicon.ico|}" />
+</head>
+<body>
+<p th:text="|Hello ${miraklShop.contactInformation.civility} ${miraklShop.contactInformation.firstname} ${miraklShop.contactInformation.lastname},|">
+</p>
+<p th:text="'Your shop details could not be processed.'">
+</p>
+<p th:text="'Please review and correct the following details:'">
+</p>
+<ul>
+    <li th:each="error : ${errors}"
+       th:text="${error}"></li>
+</ul>
+<p>
+    <a th:href="|${miraklCallBackShopUrl}|"
+       th:text="|${miraklCallBackShopUrl}|"></a>
+</p>
+<p th:text="'Kind Regards'">
+</p>
+</body>
+</html>
