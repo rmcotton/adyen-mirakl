@@ -126,6 +126,7 @@ shops:
         Samras Supermarket: 2001
         PayoutShop01: 4222
         PayoutShop02: 4316
+        UpdateShop01: 7492
 
 miraklOperator:
     miraklEnvUrl: ${MIRAKL_ENV_URL}

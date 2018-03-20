@@ -24,6 +24,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -418,6 +419,23 @@ public class MiraklAdyenSteps extends StepDefsHelper {
         cucumberTable.forEach(row ->
             shop = miraklUpdateShopApi.updateExistingShopsContactInfoWithTableData(shop, shop.getId(), miraklMarketplacePlatformOperatorApiClient, row)
         );
+    }
+
+    @Test(enabled = false)
+    @Given("^an update shop exists in Mirakl$")
+    public void updateShopExistsInMirakl(DataTable table) {
+        List<Map<Object, Object>> rows = table.getTableConverter().toMaps(table, String.class, String.class);
+
+        String seller = shopConfiguration.shopIds.get(rows.get(0).get("seller").toString()).toString();
+        shop = getMiraklShop(miraklMarketplacePlatformOperatorApiClient, seller);
+
+        Assertions.assertThat(shop.getId()).isEqualTo(seller);
+        rows.forEach(row-> {
+            Assertions.assertThat(row.get("firstName")).isEqualTo(shop.getContactInformation().getFirstname());
+            Assertions.assertThat(row.get("lastName")).isEqualTo(shop.getContactInformation().getLastname());
+            Assertions.assertThat(row.get("postCode")).isEqualTo(shop.getContactInformation().getZipCode());
+            Assertions.assertThat(row.get("city")).isEqualTo(shop.getContactInformation().getCity());
+        });
     }
 
     @Given("^a AccountHolder exists who (?:is not|is) eligible for payout$")
