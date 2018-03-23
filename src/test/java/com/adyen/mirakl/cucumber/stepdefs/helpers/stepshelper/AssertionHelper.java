@@ -1,5 +1,11 @@
 package com.adyen.mirakl.cucumber.stepdefs.helpers.stepshelper;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.springframework.stereotype.Service;
+import com.adyen.model.marketpay.GetAccountHolderResponse;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.jayway.jsonpath.DocumentContext;
@@ -9,19 +15,11 @@ import com.mirakl.client.mmp.domain.shop.MiraklShop;
 import com.mirakl.client.mmp.domain.shop.bank.MiraklIbanBankAccountInformation;
 import com.mirakl.client.mmp.domain.shop.bank.MiraklPaymentInformation;
 import net.minidev.json.JSONArray;
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Service
 public class AssertionHelper {
 
-    private static final Map<String, String> CIVILITY_TO_GENDER = ImmutableMap.<String, String>builder().put("Mr", "MALE")
-        .put("Mrs", "FEMALE")
-        .put("Miss", "FEMALE").build();
+    private static final Map<String, String> CIVILITY_TO_GENDER = ImmutableMap.<String, String>builder().put("Mr", "MALE").put("Mrs", "FEMALE").put("Miss", "FEMALE").build();
 
     private DocumentContext parsedBankAccountDetail;
 
@@ -33,6 +31,22 @@ public class AssertionHelper {
         adyenShopData.add(notificationResponse.read("content.accountHolderDetails.individualDetails.name.gender").toString());
         adyenShopData.add(notificationResponse.read("content.accountHolderDetails.email").toString());
         adyenShopData.add(notificationResponse.read("content.legalEntity").toString());
+        adyenShopData.add(notificationResponse.read("content.accountHolderDetails.address.city").toString());
+        adyenShopData.add(notificationResponse.read("content.accountHolderDetails.address.postalCode").toString());
+        return adyenShopData;
+    }
+
+    public ImmutableList.Builder<String> adyenIndividualAccountDataBuilder(GetAccountHolderResponse getAccountHolderResponse) {
+        ImmutableList.Builder<String> adyenShopData = new ImmutableList.Builder<>();
+        adyenShopData.add(getAccountHolderResponse.getAccountHolderCode());
+        adyenShopData.add(getAccountHolderResponse.getAccountHolderDetails().getIndividualDetails().getName().getFirstName());
+        adyenShopData.add(getAccountHolderResponse.getAccountHolderDetails().getIndividualDetails().getName().getLastName());
+        adyenShopData.add(getAccountHolderResponse.getAccountHolderDetails().getIndividualDetails().getName().getGender().toString());
+        adyenShopData.add(getAccountHolderResponse.getAccountHolderDetails().getEmail());
+        adyenShopData.add(getAccountHolderResponse.getLegalEntity().toString());
+        adyenShopData.add(getAccountHolderResponse.getAccountHolderDetails().getAddress().getCity());
+        adyenShopData.add(getAccountHolderResponse.getAccountHolderDetails().getAddress().getPostalCode());
+
         return adyenShopData;
     }
 
@@ -51,13 +65,13 @@ public class AssertionHelper {
         return adyenShopData;
     }
 
-    public ImmutableList.Builder<String> adyenBankAccountDetail(List<Map<Object, Object>> bankAccountDetails, List<Map <String, String>> rows) {
+    public ImmutableList.Builder<String> adyenBankAccountDetail(List<Map<Object, Object>> bankAccountDetails, List<Map<String, String>> rows) {
         Map bankAccountDetail = new HashMap();
         // if more than one bankAccountDetail is returned then we need to check if the one we care about is there
         if (bankAccountDetails.size() > 1) {
             for (Map jsonArray : bankAccountDetails) {
                 String iban = JsonPath.parse(jsonArray).read("BankAccountDetail.iban").toString();
-                if (iban.equals(rows.get(0).get("iban"))){
+                if (iban.equals(rows.get(0).get("iban"))) {
                     bankAccountDetail = (Map) jsonArray.get("BankAccountDetail");
                 }
             }
@@ -87,13 +101,14 @@ public class AssertionHelper {
             shopAdditionalFields.add("adyen-ubo" + i + "-email");
 
             for (String field : shopAdditionalFields) {
-                String fieldValue = miraklShop.getAdditionalFieldValues().stream()
-                    .filter(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::isInstance)
-                    .map(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::cast)
-                    .filter(x -> field.equals(x.getCode()))
-                    .map(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue::getValue)
-                    .findAny()
-                    .orElse("");
+                String fieldValue = miraklShop.getAdditionalFieldValues()
+                                              .stream()
+                                              .filter(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::isInstance)
+                                              .map(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::cast)
+                                              .filter(x -> field.equals(x.getCode()))
+                                              .map(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue::getValue)
+                                              .findAny()
+                                              .orElse("");
                 if (field.contains("civility")) {
                     miraklShopData.add(CIVILITY_TO_GENDER.get(fieldValue));
                 } else {
@@ -108,7 +123,7 @@ public class AssertionHelper {
         ImmutableList.Builder<String> miraklShopData = new ImmutableList.Builder<>();
 
         MiraklPaymentInformation paymentInformation = miraklShop.getPaymentInformation();
-        if(paymentInformation instanceof MiraklIbanBankAccountInformation){
+        if (paymentInformation instanceof MiraklIbanBankAccountInformation) {
             miraklShopData.add(((MiraklIbanBankAccountInformation) paymentInformation).getIban());
             miraklShopData.add(((MiraklIbanBankAccountInformation) paymentInformation).getBic());
         }
@@ -125,14 +140,16 @@ public class AssertionHelper {
         miraklShopData.add(CIVILITY_TO_GENDER.get(miraklShop.getContactInformation().getCivility()));
         miraklShopData.add(email);
         String element = miraklShop.getAdditionalFieldValues()
-            .stream()
-            .filter(MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue.class::isInstance)
-            .map(MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue.class::cast)
-            .filter(x -> "adyen-legal-entity-type".equals(x.getCode()))
-            .map(MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue::getValue)
-            .findAny()
-            .orElse("");
+                                   .stream()
+                                   .filter(MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue.class::isInstance)
+                                   .map(MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue.class::cast)
+                                   .filter(x -> "adyen-legal-entity-type".equals(x.getCode()))
+                                   .map(MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue::getValue)
+                                   .findAny()
+                                   .orElse("");
         miraklShopData.add(element);
+        miraklShopData.add(miraklShop.getContactInformation().getCity());
+        miraklShopData.add(miraklShop.getContactInformation().getZipCode());
         return miraklShopData;
     }
 

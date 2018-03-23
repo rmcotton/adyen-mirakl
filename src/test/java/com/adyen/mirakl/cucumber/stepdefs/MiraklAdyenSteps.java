@@ -1,9 +1,34 @@
 package com.adyen.mirakl.cucumber.stepdefs;
 
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import org.assertj.core.api.Assertions;
+import org.awaitility.Duration;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testng.annotations.Test;
 import com.adyen.mirakl.cucumber.stepdefs.helpers.stepshelper.StepDefsHelper;
 import com.adyen.mirakl.domain.AdyenPayoutError;
 import com.adyen.model.Amount;
-import com.adyen.model.marketpay.*;
+import com.adyen.model.marketpay.Account;
+import com.adyen.model.marketpay.AccountHolderBalanceRequest;
+import com.adyen.model.marketpay.AccountHolderBalanceResponse;
+import com.adyen.model.marketpay.BusinessDetails;
+import com.adyen.model.marketpay.DocumentDetail;
+import com.adyen.model.marketpay.GetAccountHolderRequest;
+import com.adyen.model.marketpay.GetAccountHolderResponse;
+import com.adyen.model.marketpay.GetUploadedDocumentsRequest;
+import com.adyen.model.marketpay.GetUploadedDocumentsResponse;
+import com.adyen.model.marketpay.ShareholderContact;
+import com.adyen.model.marketpay.TransferFundsResponse;
+import com.adyen.model.marketpay.UploadDocumentRequest;
+import com.adyen.model.marketpay.UploadDocumentResponse;
 import com.adyen.service.exception.ApiException;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
@@ -13,8 +38,6 @@ import com.jayway.jsonpath.JsonPath;
 import com.mirakl.client.mmp.domain.shop.MiraklShop;
 import com.mirakl.client.mmp.operator.domain.shop.create.MiraklCreatedShops;
 import cucumber.api.DataTable;
-import cucumber.api.Scenario;
-import cucumber.api.java.Before;
 import cucumber.api.java.en.And;
 import cucumber.api.java.en.Given;
 import cucumber.api.java.en.Then;
@@ -22,21 +45,6 @@ import cucumber.api.java.en.When;
 import io.restassured.RestAssured;
 import io.restassured.response.ResponseBody;
 import net.minidev.json.JSONArray;
-import org.assertj.core.api.Assertions;
-import org.awaitility.Duration;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testng.annotations.Test;
-
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import static junit.framework.TestCase.fail;
 import static org.awaitility.Awaitility.await;
 
@@ -425,8 +433,9 @@ public class MiraklAdyenSteps extends StepDefsHelper {
     }
 
     @And("^the shop data is correctly mapped to the Adyen Account$")
-    public void theShopDataIsCorrectlyMappedToTheAdyenAccount() {
-        ImmutableList<String> adyen = assertionHelper.adyenAccountDataBuilder(notificationResponse).build();
+    public void theShopDataIsCorrectlyMappedToTheAdyenAccount() throws Exception {
+        GetAccountHolderResponse response = retrieveAccountHolderResponse(shop.getId());
+        ImmutableList<String> adyen = assertionHelper.adyenIndividualAccountDataBuilder(response).build();
         ImmutableList<String> mirakl = assertionHelper.miraklShopDataBuilder(shop.getContactInformation().getEmail(), shop).build();
         Assertions.assertThat(adyen).containsAll(mirakl);
     }

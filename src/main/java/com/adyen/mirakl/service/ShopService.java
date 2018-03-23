@@ -175,7 +175,6 @@ public class ShopService {
 
         // Set AccountHolderDetails
         AccountHolderDetails accountHolderDetails = new AccountHolderDetails();
-        accountHolderDetails.setAddress(setAddressDetails(shop));
         accountHolderDetails.setBankAccountDetails(setBankAccountDetails(shop));
 
         updateDetailsFromShop(accountHolderDetails, shop);
@@ -332,6 +331,8 @@ public class ShopService {
         } else {
             throw new IllegalArgumentException(legalEntity.toString() + " not supported");
         }
+
+        accountHolderDetails.setAddress(setAddressDetails(shop));
 
         return accountHolderDetails;
     }
