@@ -74,8 +74,7 @@ public class StepDefsHelper {
 
     @Autowired
     protected World world;
-    @Autowired
-    protected DocumentContext notificationResponse;
+
 
     protected void waitForNotification() {
         await().atMost(new Duration(30, TimeUnit.MINUTES)).untilAsserted(() -> {
