@@ -222,4 +222,17 @@ public class AdyenNotificationSteps extends StepDefsHelper {
                 .read("verificationType").toString()).isEqualTo(verificationType);
         });
     }
+
+    @And("^(?:the previous BankAccountDetail will be removed|a notification will be sent in relation to the balance change)$")
+    public void thePreviousBankAccountDetailWillBeRemoved(DataTable table) {
+        List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
+        String eventType = cucumberTable.get(0).get("eventType");
+        String reason = cucumberTable.get(0).get("reason");
+
+        await().untilAsserted(() -> {
+            DocumentContext adyenNotificationBody = JsonPath.parse(retrieveAdyenNotificationBody(eventType, world.miraklShop.getId()));
+            Assertions.assertThat(adyenNotificationBody.read("content.reason").toString())
+                .contains(reason);
+        });
+    }
 }

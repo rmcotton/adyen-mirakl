@@ -55,6 +55,13 @@ public class MiraklNewUpdateShopSteps extends StepDefsHelper {
         world.miraklShop = retrieveCreatedShop(shops);
     }
 
+    @Given("^a new (.*) shop has been created in Mirakl with invalid data$")
+    public void aNewBusinessShopHasBeenCreatedInMiraklWithInvalidData(String legalEntity, DataTable table) {
+        List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
+        MiraklCreatedShops shops = miraklShopApi.createBusinessShopWithMissingUboInfo(miraklMarketplacePlatformOperatorApiClient, cucumberTable, legalEntity);
+        world.miraklShop = retrieveCreatedShop(shops);
+    }
+
     @When("^the IBAN has been modified in Mirakl$")
     public void theIBANHasBeenModifiedInMirakl(DataTable table) {
         List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
