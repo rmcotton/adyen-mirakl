@@ -692,4 +692,17 @@ public class MiraklAdyenSteps extends StepDefsHelper {
             }
         );
     }
+
+    @Then("^the (.*) notification will be sent by Adyen$")
+    public void theTRANSFER_FUNDSNotificationWillBeSentByAdyen(String eventType) throws Throwable {
+        waitForNotification();
+        await().untilAsserted(() -> {
+            Map<String, Object> adyenNotificationBody = restAssuredAdyenApi
+                .getAdyenNotificationBody(startUpTestingHook.getBaseRequestBinUrlPath(), shop.getId(), eventType, null);
+
+            Assertions.assertThat(adyenNotificationBody).withFailMessage("No data received from notification endpoint").isNotNull();
+            Assertions.assertThat(JsonPath.parse(adyenNotificationBody.get("content"))
+                .read("eventType").toString()).isEqualTo(eventType);
+        });
+    }
 }

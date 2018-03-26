@@ -52,3 +52,18 @@ Feature: Payout notifications for seller payout
             | currency | amount | statusCode | iban                   |
             | EUR      | 9900.0 | Initiated  | GB26TEST40051512347366 |
         And the failed payout record is removed from the Connector database
+
+    @ADY-29
+    Scenario: Subscription file is sent to Connector app so that Adyen can process a subscription fee transfer
+        Given a shop has been created in Mirakl for an Individual with mandatory KYC data
+            | city   | bank name | iban                   | bankOwnerName | lastName |
+            | PASSED | testBank  | GB26TEST40051512347366 | TestData      | TestData |
+        And we process the data and push to Adyen
+        And a passport has been uploaded to Adyen
+        And the accountHolders balance is increased
+            | source accountHolderCode     | transfer amount |
+            | alessioIndividualTestPayout2 | 100             |
+        When a payment voucher is sent to the Connector
+            | paymentVoucher                  |
+            | PaymentVoucher_Subscription.csv |
+        Then the TRANSFER_FUNDS notification will be sent by Adyen
