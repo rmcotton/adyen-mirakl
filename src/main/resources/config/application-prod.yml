@@ -135,4 +135,4 @@ jhipster:
 
 application:
     initialDeltaDaysBack: 30
-    miraklPullCron: "0 */5 * * * ?"
+    miraklPullCron: "0 */1 * * * ?"
