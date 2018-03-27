@@ -26,6 +26,10 @@
                 <constraints nullable="true" />
             </column>
 
+            <column name="raw_subscription_request" type="clob">
+                <constraints nullable="true" />
+            </column>
+
             <column name="raw_response" type="clob">
                 <constraints nullable="true" />
             </column>

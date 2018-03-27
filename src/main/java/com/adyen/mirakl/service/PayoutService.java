@@ -1,26 +1,32 @@
 package com.adyen.mirakl.service;
 
-import com.adyen.Util.Util;
-import com.adyen.mirakl.domain.AdyenPayoutError;
-import com.adyen.mirakl.repository.AdyenPayoutErrorRepository;
-import com.adyen.model.Amount;
-import com.adyen.model.marketpay.*;
-import com.adyen.service.Account;
-import com.adyen.service.Fund;
-import com.adyen.service.exception.ApiException;
-import com.google.gson.Gson;
+import java.io.IOException;
+import java.time.ZonedDateTime;
+import java.util.List;
+import javax.annotation.Resource;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.annotation.Resource;
-import java.io.IOException;
-import java.time.ZonedDateTime;
-import java.util.List;
+import com.adyen.Util.Util;
+import com.adyen.mirakl.domain.AdyenPayoutError;
+import com.adyen.mirakl.repository.AdyenPayoutErrorRepository;
+import com.adyen.model.Amount;
+import com.adyen.model.marketpay.BankAccountDetail;
+import com.adyen.model.marketpay.GetAccountHolderRequest;
+import com.adyen.model.marketpay.GetAccountHolderResponse;
+import com.adyen.model.marketpay.PayoutAccountHolderRequest;
+import com.adyen.model.marketpay.PayoutAccountHolderResponse;
+import com.adyen.model.marketpay.TransferFundsRequest;
+import com.adyen.model.marketpay.TransferFundsResponse;
+import com.adyen.service.Account;
+import com.adyen.service.Fund;
+import com.adyen.service.exception.ApiException;
+import com.google.gson.Gson;
 
 @Service
 @Transactional
@@ -36,6 +42,12 @@ public class PayoutService {
 
     @Resource
     private AdyenPayoutErrorRepository adyenPayoutErrorRepository;
+
+    @Value("${payoutService.subscriptionTransferCode}")
+    private String subscriptionTransferCode;
+
+    @Value("${payoutService.liableAccountCode}")
+    private String liableAccountCode;
 
     protected final static Gson GSON = new Gson();
 
@@ -55,15 +67,27 @@ public class PayoutService {
             PayoutAccountHolderRequest payoutAccountHolderRequest = null;
             PayoutAccountHolderResponse payoutAccountHolderResponse = null;
 
+            TransferFundsRequest transferFundsRequest = null;
+            String subscriptionAmount = record.get("subscription-amount");
             try {
-                payoutAccountHolderRequest = createPayoutAccountHolderRequest(accountHolderCode, amount, currency, iban, description);
+                //Call Adyen to retrieve the accountCode from the accountHolderCode
+                GetAccountHolderResponse accountHolderResponse = getAccountHolderResponse(accountHolderCode);
+
+                payoutAccountHolderRequest = createPayoutAccountHolderRequest(accountHolderResponse, amount, currency, iban, description);
+                if (! subscriptionAmount.isEmpty() && ! subscriptionAmount.equals("0")) {
+                    transferFundsRequest = createTransferFundsSubscription(accountHolderResponse, subscriptionAmount, currency);
+                    TransferFundsResponse transferFundsResponse = adyenFundService.transferFunds(transferFundsRequest);
+                    log.info("Subscription submitted for accountHolder: [{}] + Response: [{}]", accountHolderCode, transferFundsResponse);
+                    transferFundsRequest = null;
+                }
                 payoutAccountHolderResponse = adyenFundService.payoutAccountHolder(payoutAccountHolderRequest);
                 log.info("Payout submitted for accountHolder: [{}] + Psp ref: [{}]", accountHolderCode, payoutAccountHolderResponse.getPspReference());
             } catch (ApiException e) {
                 log.error("MP exception: " + e.getError(), e);
-                storeAdyenPayoutError(payoutAccountHolderRequest, payoutAccountHolderResponse);
+                storeAdyenPayoutError(payoutAccountHolderRequest, payoutAccountHolderResponse, transferFundsRequest);
             } catch (Exception e) {
                 log.error("MP exception: " + e.getMessage(), e);
+                storeAdyenPayoutError(payoutAccountHolderRequest, payoutAccountHolderResponse, transferFundsRequest);
             }
         }
 
@@ -72,7 +96,7 @@ public class PayoutService {
     /**
      * Store Payout request into database so we can do retries
      */
-    protected void storeAdyenPayoutError(PayoutAccountHolderRequest payoutAccountHolderRequest, PayoutAccountHolderResponse payoutAccountHolderResponse) {
+    protected void storeAdyenPayoutError(PayoutAccountHolderRequest payoutAccountHolderRequest, PayoutAccountHolderResponse payoutAccountHolderResponse, TransferFundsRequest transferFundsRequest) {
         if (payoutAccountHolderRequest != null) {
             String rawRequest = GSON.toJson(payoutAccountHolderRequest);
             AdyenPayoutError adyenPayoutError = new AdyenPayoutError();
@@ -80,10 +104,17 @@ public class PayoutService {
             adyenPayoutError.setAccountHolderCode(payoutAccountHolderRequest.getAccountHolderCode());
             adyenPayoutError.setRawRequest(rawRequest);
 
+
             if (payoutAccountHolderResponse != null) {
                 String rawResponse = GSON.toJson(payoutAccountHolderResponse);
                 adyenPayoutError.setRawResponse(rawResponse);
             }
+
+            if (transferFundsRequest != null) {
+                String subscriptionRawRequest = GSON.toJson(transferFundsRequest);
+                adyenPayoutError.setRawSubscriptionRequest(subscriptionRawRequest);
+            }
+
 
             adyenPayoutError.setProcessing(false);
             adyenPayoutError.setRetry(0);
@@ -91,22 +122,18 @@ public class PayoutService {
         }
     }
 
-    protected PayoutAccountHolderResponse payoutAccountHolder(PayoutAccountHolderRequest payoutAccountHolderRequest) throws Exception {
-        return adyenFundService.payoutAccountHolder(payoutAccountHolderRequest);
-    }
-
-    protected PayoutAccountHolderRequest createPayoutAccountHolderRequest(String accountHolderCode, String amount, String currency, String iban, String description) throws Exception {
-
-        //Call Adyen to retrieve the accountCode from the accountHolderCode
-        GetAccountHolderResponse accountHolderResponse = getAccountHolderResponse(accountHolderCode);
-        String accountCode = getAccountCode(accountHolderResponse);
+    protected PayoutAccountHolderRequest createPayoutAccountHolderRequest(GetAccountHolderResponse accountHolderResponse,
+                                                                          String amount,
+                                                                          String currency,
+                                                                          String iban,
+                                                                          String description) throws Exception {
 
         //Retrieve the bankAccountUUID from Adyen matching to the iban provided from Mirakl
         String bankAccountUUID = getBankAccountUUID(accountHolderResponse, iban);
         PayoutAccountHolderRequest payoutAccountHolderRequest = new PayoutAccountHolderRequest();
-        payoutAccountHolderRequest.setAccountCode(accountCode);
+        payoutAccountHolderRequest.setAccountCode(getAccountCode(accountHolderResponse));
         payoutAccountHolderRequest.setBankAccountUUID(bankAccountUUID);
-        payoutAccountHolderRequest.setAccountHolderCode(accountHolderCode);
+        payoutAccountHolderRequest.setAccountHolderCode(accountHolderResponse.getAccountHolderCode());
         payoutAccountHolderRequest.setDescription(description);
         Amount adyenAmount = Util.createAmount(amount, currency);
         payoutAccountHolderRequest.setAmount(adyenAmount);
@@ -135,6 +162,20 @@ public class PayoutService {
             }
         }
         throw new IllegalStateException("No matching Iban between Mirakl and Adyen platforms.");
+    }
+
+    protected TransferFundsRequest createTransferFundsSubscription(GetAccountHolderResponse accountHolderResponse, String commissionFee, String currency) throws Exception {
+
+        TransferFundsRequest transferFundsRequest = new TransferFundsRequest();
+        Amount adyenAmount = Util.createAmount(commissionFee, currency);
+
+        transferFundsRequest.setAmount(adyenAmount);
+
+        transferFundsRequest.setSourceAccountCode(getAccountCode(accountHolderResponse));
+        transferFundsRequest.setDestinationAccountCode(liableAccountCode);
+
+        transferFundsRequest.setTransferCode(subscriptionTransferCode);
+        return transferFundsRequest;
     }
 
 

@@ -198,3 +198,6 @@ mailtrapConfig:
     mailTrapInboxId: 343861
     apiToken: ${MAILTRAP_API_TOKEN}
 
+payoutService:
+    subscriptionTransferCode: ${ADYEN_SUBSCRIPTION_TRANSFER_CODE}
+    liableAccountCode: ${ADYEN_LIABLE_ACCOUNT_CODE}

@@ -2,32 +2,20 @@ package com.adyen.mirakl.service;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import com.adyen.model.marketpay.AccountHolderDetails;
 import com.adyen.model.marketpay.BankAccountDetail;
-import com.adyen.model.marketpay.GetAccountHolderRequest;
 import com.adyen.model.marketpay.GetAccountHolderResponse;
 import com.adyen.model.marketpay.PayoutAccountHolderRequest;
-import com.adyen.service.Account;
-
+import com.adyen.model.marketpay.TransferFundsRequest;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class PayoutServiceTest {
 
     @InjectMocks
     private PayoutService payoutService;
-
-    @Mock
-    private Account adyenAccountServiceMock;
-
-    @Captor
-    private ArgumentCaptor<GetAccountHolderRequest> getAccountHolderRequestArgumentCaptor;
 
     @Test
     public void testGetBankAccountUUID() {
@@ -44,9 +32,7 @@ public class PayoutServiceTest {
     @Test
     public void testPayout() throws Exception {
         GetAccountHolderResponse getAccountHolderResponse = getResponseWithBankDetails();
-        when(adyenAccountServiceMock.getAccountHolder(getAccountHolderRequestArgumentCaptor.capture())).thenReturn(getAccountHolderResponse);
-        PayoutAccountHolderRequest request = payoutService.createPayoutAccountHolderRequest("2000", "10.25", "EUR", "GB29NWBK60161331926819", "Description");
-        assertEquals("2000", getAccountHolderRequestArgumentCaptor.getValue().getAccountHolderCode());
+        PayoutAccountHolderRequest request = payoutService.createPayoutAccountHolderRequest(getAccountHolderResponse, "10.25", "EUR", "GB29NWBK60161331926819", "Description");
         assertEquals("2a421c72-ead7-4ad3-8741-80a0aebb8758", request.getBankAccountUUID());
         assertEquals("2000", request.getAccountHolderCode());
         assertEquals("123456", request.getAccountCode());
@@ -67,6 +53,7 @@ public class PayoutServiceTest {
         accountHolderDetails.addBankAccountDetail(bankAccountDetail1);
         GetAccountHolderResponse getAccountHolderResponse = new GetAccountHolderResponse();
         getAccountHolderResponse.setAccountHolderDetails(accountHolderDetails);
+        getAccountHolderResponse.setAccountHolderCode("2000");
 
         com.adyen.model.marketpay.Account marketpayAccount = new com.adyen.model.marketpay.Account();
         marketpayAccount.setAccountCode("123456");
@@ -74,4 +61,14 @@ public class PayoutServiceTest {
 
         return getAccountHolderResponse;
     }
+
+    @Test
+    public void testCreateTransferFundsSubscription() throws Exception {
+        GetAccountHolderResponse getAccountHolderResponse = getResponseWithBankDetails();
+        TransferFundsRequest transferFundsRequest = payoutService.createTransferFundsSubscription(getAccountHolderResponse, "12.34", "EUR");
+        assertEquals(1234L, (long) transferFundsRequest.getAmount().getValue());
+        assertEquals("EUR", transferFundsRequest.getAmount().getCurrency());
+    }
+
+
 }

@@ -46,7 +46,7 @@ public class PayoutServiceIntegrationTest {
         Amount adyenAmount = Util.createAmount("100", "EUR");
         payoutAccountHolderRequest.setAmount(adyenAmount);
 
-        payoutService.storeAdyenPayoutError(payoutAccountHolderRequest, null);
+        payoutService.storeAdyenPayoutError(payoutAccountHolderRequest, null, null);
 
         // check if it stores it properly
         final List<AdyenPayoutError> all = adyenPayoutErrorRepository.findAll();

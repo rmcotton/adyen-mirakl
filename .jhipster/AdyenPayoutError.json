@@ -8,6 +8,11 @@
             "fieldTypeBlobContent": "text"
         },
         {
+            "fieldName": "rawSubscriptionRequest",
+            "fieldType": "byte[]",
+            "fieldTypeBlobContent": "text"
+        },
+        {
             "fieldName": "rawResponse",
             "fieldType": "byte[]",
             "fieldTypeBlobContent": "text"

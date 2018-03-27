@@ -42,10 +42,10 @@ public class RetryPayoutServiceTest {
 
         // add 2 failed payouts
         PayoutAccountHolderRequest payoutAccountHolderRequestFirst = createFailedPayout("1");
-        payoutService.storeAdyenPayoutError(payoutAccountHolderRequestFirst, null);
+        payoutService.storeAdyenPayoutError(payoutAccountHolderRequestFirst, null, null);
 
         PayoutAccountHolderRequest payoutAccountHolderRequestSecond = createFailedPayout("2");
-        payoutService.storeAdyenPayoutError(payoutAccountHolderRequestSecond, null);
+        payoutService.storeAdyenPayoutError(payoutAccountHolderRequestSecond, null, null);
 
         // retry failed payouts
         retryPayoutService.retryFailedPayouts();
@@ -76,7 +76,7 @@ public class RetryPayoutServiceTest {
         String accountHolderCode = "1000";
         // add 2 failed payouts
         PayoutAccountHolderRequest payoutAccountHolderRequestFirst = createFailedPayout("", accountHolderCode);
-        payoutService.storeAdyenPayoutError(payoutAccountHolderRequestFirst, null);
+        payoutService.storeAdyenPayoutError(payoutAccountHolderRequestFirst, null, null);
         retryPayoutService.retryFailedPayoutsForAccountHolder(accountHolderCode);
 
         List<AdyenPayoutError> all = adyenPayoutErrorRepository.findByAccountHolderCode(accountHolderCode);

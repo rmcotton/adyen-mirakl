@@ -175,3 +175,7 @@ shopService:
     maxUbos: 4
 
 mail.max.retries: 10
+
+payoutService:
+    subscriptionTransferCode: ${ADYEN_SUBSCRIPTION_TRANSFER_CODE}
+    liableAccountCode: ${ADYEN_LIABLE_ACCOUNT_CODE}
