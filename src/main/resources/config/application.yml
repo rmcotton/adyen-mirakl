@@ -177,5 +177,5 @@ shopService:
 mail.max.retries: 10
 
 payoutService:
-    subscriptionTransferCode: ${ADYEN_SUBSCRIPTION_TRANSFER_CODE}
+    subscriptionTransferCode: "TransferCode_1"
     liableAccountCode: ${ADYEN_LIABLE_ACCOUNT_CODE}
