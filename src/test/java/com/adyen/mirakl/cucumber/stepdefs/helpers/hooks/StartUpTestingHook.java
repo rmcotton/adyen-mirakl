@@ -96,6 +96,10 @@ public class StartUpTestingHook implements ApplicationListener<ContextRefreshedE
             notificationEventConfiguration(
                 NotificationEventConfiguration.EventTypeEnum.ACCOUNT_HOLDER_STATUS_CHANGE,
                 NotificationEventConfiguration.IncludeModeEnum.INCLUDE
+            ),
+            notificationEventConfiguration(
+                NotificationEventConfiguration.EventTypeEnum.TRANSFER_FUNDS,
+                NotificationEventConfiguration.IncludeModeEnum.INCLUDE
             )
         ));
 

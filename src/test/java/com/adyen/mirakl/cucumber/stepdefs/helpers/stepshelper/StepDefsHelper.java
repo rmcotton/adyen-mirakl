@@ -13,12 +13,11 @@ import com.adyen.mirakl.service.DocService;
 import com.adyen.mirakl.service.RetryPayoutService;
 import com.adyen.mirakl.service.ShopService;
 import com.adyen.model.Amount;
-import com.adyen.model.marketpay.GetAccountHolderRequest;
-import com.adyen.model.marketpay.GetAccountHolderResponse;
-import com.adyen.model.marketpay.TransferFundsRequest;
-import com.adyen.model.marketpay.TransferFundsResponse;
+import com.adyen.model.marketpay.*;
 import com.adyen.service.Account;
 import com.adyen.service.Fund;
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
 import com.mirakl.client.mmp.domain.shop.MiraklShop;
 import com.mirakl.client.mmp.domain.shop.MiraklShops;
 import com.mirakl.client.mmp.operator.core.MiraklMarketplacePlatformOperatorApiClient;
@@ -27,9 +26,14 @@ import com.mirakl.client.mmp.operator.domain.shop.create.MiraklCreatedShops;
 import com.mirakl.client.mmp.request.shop.MiraklGetShopsRequest;
 import org.assertj.core.api.Assertions;
 import org.awaitility.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 
 import javax.annotation.Resource;
+import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -74,6 +78,14 @@ public class StepDefsHelper {
     @Resource
     protected AdyenPayoutErrorRepository adyenPayoutErrorRepository;
 
+    @Value("${payoutService.subscriptionTransferCode}")
+    protected String subscriptionTransferCode;
+
+    @Value("${payoutService.liableAccountCode}")
+    protected String liableAccountCode;
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
+
     protected void waitForNotification() {
         await().atMost(new Duration(30, TimeUnit.MINUTES)).untilAsserted(() -> {
             boolean endpointHasReceivedANotification = restAssuredAdyenApi.endpointHasANotification(startUpTestingHook.getBaseRequestBinUrlPath());
@@ -90,20 +102,19 @@ public class StepDefsHelper {
     // use for scenarios which don't require verificationType verification
     protected Map<String, Object> retrieveAdyenNotificationBody(String notification, String accountHolderCode) {
         Map<String, Object> adyenNotificationBody = new HashMap<>();
-        await().untilAsserted(() -> {
-            Map<String, Object> notificationBody = restAssuredAdyenApi
-                .getAdyenNotificationBody(startUpTestingHook.getBaseRequestBinUrlPath(),
-                    accountHolderCode, notification, null);
+        Map<String, Object> notificationBody = restAssuredAdyenApi
+            .getAdyenNotificationBody(startUpTestingHook.getBaseRequestBinUrlPath(),
+                accountHolderCode, notification, null);
 
-            Assertions.assertThat(adyenNotificationBody).withFailMessage("No data in endpoint.").isNotNull();
-            if (notificationBody != null) {
-                adyenNotificationBody.putAll(notificationBody);
-            } else {
-                Assertions.fail(String
-                    .format("Notification: [%s] was not found for accountHolderCode: [%s] in endpoint: [%s]",
-                        notification, accountHolderCode, startUpTestingHook.getBaseRequestBinUrlPath()));
-            }
-        });
+        Assertions.assertThat(adyenNotificationBody).withFailMessage("No data in endpoint.").isNotNull();
+        if (notificationBody != null) {
+            adyenNotificationBody.putAll(notificationBody);
+        } else {
+            Assertions.fail(String
+                .format("Notification: [%s] was not found for accountHolderCode: [%s] in endpoint: [%s]",
+                    notification, accountHolderCode, startUpTestingHook.getBaseRequestBinUrlPath()));
+        }
+
         return adyenNotificationBody;
     }
 
@@ -138,5 +149,65 @@ public class StepDefsHelper {
         transferFundsRequest.setDestinationAccountCode(destinationAccountCode.toString());
         transferFundsRequest.setTransferCode("TransferCode_1");
         return adyenFundService.transferFunds(transferFundsRequest);
+    }
+
+    protected void uploadPassportToAdyen(MiraklShop shop) throws Exception {
+        URL url = Resources.getResource("adyenRequests/PassportDocumentContent.txt");
+        UploadDocumentRequest uploadDocumentRequest = new UploadDocumentRequest();
+        uploadDocumentRequest.setDocumentContent(Resources.toString(url, Charsets.UTF_8));
+        DocumentDetail documentDetail = new DocumentDetail();
+        documentDetail.setAccountHolderCode(shop.getId());
+        documentDetail.setDescription("PASSED");
+        documentDetail.setDocumentType(DocumentDetail.DocumentTypeEnum.valueOf("PASSPORT"));
+        documentDetail.setFilename("passport.jpg");
+        uploadDocumentRequest.setDocumentDetail(documentDetail);
+        UploadDocumentResponse response = adyenAccountService.uploadDocument(uploadDocumentRequest);
+
+        Assertions.assertThat(response.getAccountHolderCode()).isEqualTo(shop.getId());
+    }
+
+    protected void transferAccountHolderBalance(List<Map<String, String>> cucumberTable, MiraklShop shop) throws Exception {
+        Long transferAmount = Long.valueOf(cucumberTable.get(0).get("transfer amount"));
+
+        GetAccountHolderResponse accountHolder = getGetAccountHolderResponse(shop);
+
+        accountHolder.getAccounts().stream()
+            .map(com.adyen.model.marketpay.Account::getAccountCode)
+            .findAny()
+            .ifPresent(accountCode -> {
+                Integer destinationAccountCode = Integer.valueOf(accountCode);
+                Integer sourceAccountCode = adyenAccountConfiguration.getAccountCode().get("sourceAccountCode");
+
+                TransferFundsResponse response = null;
+                try {
+                    response = transferFundsAndRetrieveResponse(transferAmount, sourceAccountCode, destinationAccountCode);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                assert response != null;
+                Assertions
+                    .assertThat(response.getResultCode())
+                    .isEqualTo("Received");
+            });
+
+        await().untilAsserted(() -> {
+            AccountHolderBalanceRequest accountHolderBalanceRequest = new AccountHolderBalanceRequest();
+            accountHolderBalanceRequest.setAccountHolderCode(shop.getId());
+            AccountHolderBalanceResponse balance = adyenFundService.AccountHolderBalance(accountHolderBalanceRequest);
+
+            Assertions
+                .assertThat(balance.getTotalBalance().getBalance()
+                    .stream()
+                    .map(Amount::getValue)
+                    .findAny().orElse(null))
+                .isEqualTo(transferAmount);
+
+            GetAccountHolderResponse account = getGetAccountHolderResponse(shop);
+
+            Assertions
+                .assertThat(account.getAccountHolderStatus().getPayoutState().getAllowPayout())
+                .isTrue();
+        });
+        log.info(String.format("\nAmount transferred successfully to [%s]", shop.getId()));
     }
 }

@@ -158,7 +158,6 @@ public class ShopServiceTest {
         final Address address = request.getAccountHolderDetails().getAddress();
         Assertions.assertThat(address.getHouseNumberOrName()).isEqualTo("1");
         Assertions.assertThat(address.getPostalCode()).isEqualTo("zipCode");
-        Assertions.assertThat(address.getStateOrProvince()).isEqualTo("state");
         Assertions.assertThat(address.getStreet()).isEqualTo("street");
         Assertions.assertThat(address.getCountry()).isEqualTo("GB");
         Assertions.assertThat(address.getCity()).isEqualTo("city");

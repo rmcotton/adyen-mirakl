@@ -175,7 +175,6 @@ public class ShopService {
 
         // Set AccountHolderDetails
         AccountHolderDetails accountHolderDetails = new AccountHolderDetails();
-        accountHolderDetails.setAddress(setAddressDetails(shop));
         accountHolderDetails.setBankAccountDetails(setBankAccountDetails(shop));
 
         updateDetailsFromShop(accountHolderDetails, shop);
@@ -208,13 +207,12 @@ public class ShopService {
         return Optional.of(shop.getContactInformation()).orElseThrow(() -> new RuntimeException("Contact information not found"));
     }
 
-    private Address setAddressDetails(MiraklShop shop) {
+    private Address createAddressFromShop(MiraklShop shop) {
         MiraklContactInformation contactInformation = getContactInformationFromShop(shop);
-        if (! contactInformation.getCountry().isEmpty()) {
+        if (contactInformation != null && ! StringUtils.isEmpty(contactInformation.getCountry())) {
             Address address = new Address();
             address.setHouseNumberOrName(getHouseNumberFromStreet(contactInformation.getStreet1()));
             address.setPostalCode(contactInformation.getZipCode());
-            address.setStateOrProvince(contactInformation.getState());
             address.setStreet(contactInformation.getStreet1());
             address.setCountry(getIso2CountryCodeFromIso3(contactInformation.getCountry()));
             address.setCity(contactInformation.getCity());
@@ -332,6 +330,8 @@ public class ShopService {
         } else {
             throw new IllegalArgumentException(legalEntity.toString() + " not supported");
         }
+
+        accountHolderDetails.setAddress(createAddressFromShop(shop));
 
         return accountHolderDetails;
     }

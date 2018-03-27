@@ -131,7 +131,8 @@ shops:
 
 accounts:
     accountCode:
-        alessioIndividualTestPayout2: 131712554
+        # alessioIndividualTestPayout2 (accountHolderCode) used for balance transfer for newly created shops for payout test scenarios
+        sourceAccountCode: 131712554
 
 miraklOperator:
     miraklEnvUrl: ${MIRAKL_ENV_URL}
