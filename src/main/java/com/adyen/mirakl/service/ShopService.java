@@ -8,11 +8,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -70,6 +74,15 @@ public class ShopService {
     @Resource
     private InvalidFieldsNotificationService invalidFieldsNotificationService;
 
+    private Pattern houseNumberPattern;
+
+    @Value("${extract.house.number.regex}")
+    private String houseNumberRegex;
+
+    @PostConstruct
+    public void postConstruct() {
+        houseNumberPattern = Pattern.compile(houseNumberRegex);
+    }
 
     public void processUpdatedShops() {
         final ZonedDateTime beforeProcessing = ZonedDateTime.now();
@@ -177,7 +190,7 @@ public class ShopService {
         AccountHolderDetails accountHolderDetails = new AccountHolderDetails();
         accountHolderDetails.setBankAccountDetails(setBankAccountDetails(shop));
 
-        updateDetailsFromShop(accountHolderDetails, shop);
+        updateDetailsFromShop(accountHolderDetails, shop, null);
 
         // Set email
         MiraklContactInformation contactInformation = getContactInformationFromShop(shop);
@@ -234,10 +247,6 @@ public class ShopService {
         }
         businessDetails.setShareholders(uboService.extractUbos(shop, existingAccountHolder));
         return businessDetails;
-    }
-
-    private BusinessDetails addBusinessDetailsFromShop(final MiraklShop shop) {
-        return addBusinessDetailsFromShop(shop, null);
     }
 
     private IndividualDetails createIndividualDetailsFromShop(MiraklShop shop) {
@@ -313,19 +322,19 @@ public class ShopService {
 
         final AccountHolderDetails accountHolderDetails = Optional.ofNullable(updateAccountHolderRequest.getAccountHolderDetails()).orElseGet(AccountHolderDetails::new);
         updateAccountHolderRequest.setAccountHolderDetails(accountHolderDetails);
-        updateDetailsFromShop(accountHolderDetails, shop);
+        updateDetailsFromShop(accountHolderDetails, shop, existingAccountHolder);
 
         return updateAccountHolderRequest;
     }
 
-    private AccountHolderDetails updateDetailsFromShop(AccountHolderDetails accountHolderDetails, MiraklShop shop) {
+    private AccountHolderDetails updateDetailsFromShop(AccountHolderDetails accountHolderDetails, MiraklShop shop, GetAccountHolderResponse existingAccountHolder) {
         LegalEntityEnum legalEntity = getLegalEntityFromShop(shop);
 
         if (LegalEntityEnum.INDIVIDUAL == legalEntity) {
             IndividualDetails individualDetails = createIndividualDetailsFromShop(shop);
             accountHolderDetails.setIndividualDetails(individualDetails);
         } else if (LegalEntityEnum.BUSINESS == legalEntity) {
-            BusinessDetails businessDetails = addBusinessDetailsFromShop(shop);
+            BusinessDetails businessDetails = addBusinessDetailsFromShop(shop, existingAccountHolder);
             accountHolderDetails.setBusinessDetails(businessDetails);
         } else {
             throw new IllegalArgumentException(legalEntity.toString() + " not supported");
@@ -425,10 +434,18 @@ public class ShopService {
 
 
     /**
-     * TODO: implement method to retrieve housenumber from street
+     * Finds a number in the string street starting at the end of the string e.g.
+     * 1 street name house 5
+     * returns 5
      */
     private String getHouseNumberFromStreet(String street) {
-        return "1";
+        Matcher matcher = houseNumberPattern.matcher(street);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }else{
+            log.warn("Unable to retrieve house number from street: {}", street);
+            return null;
+        }
     }
 
     /**
@@ -456,4 +473,7 @@ public class ShopService {
         return countryCodes;
     }
 
+    public void setHouseNumberPattern(final Pattern houseNumberPattern) {
+        this.houseNumberPattern = houseNumberPattern;
+    }
 }

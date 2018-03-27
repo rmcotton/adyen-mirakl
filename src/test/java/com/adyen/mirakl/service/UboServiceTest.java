@@ -17,12 +17,14 @@ import com.mirakl.client.mmp.domain.shop.document.MiraklShopDocument;
 import com.mirakl.client.mmp.operator.core.MiraklMarketplacePlatformOperatorApiClient;
 import com.mirakl.client.mmp.request.shop.MiraklGetShopsRequest;
 import org.assertj.core.api.Assertions;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.*;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.mockito.Mockito.when;
@@ -76,7 +78,10 @@ public class UboServiceTest {
     @Captor
     private ArgumentCaptor<MiraklGetShopsRequest> miraklGetShopsRequestCaptor;
 
-
+    @Before
+    public void setup(){
+        uboService.setHouseNumberPattern(Pattern.compile("(\\d+)\\D*$"));
+    }
 
     @Test
     public void shouldCreateAllShareholdersFromUbos() {
@@ -166,6 +171,29 @@ public class UboServiceTest {
         Assertions.assertThat(shareholderContact.getEmail()).isEqualTo("email1");
         Assertions.assertThat(shareholderContact.getPersonalData()).isNull();
         Assertions.assertThat(shareholderContact.getAddress()).isNull();
+        Assertions.assertThat(shareholderContact.getPhoneNumber()).isNull();
+        Assertions.assertThat(shareholderContact.getShareholderCode()).isNull();
+    }
+
+    @Test
+    public void shouldTakeFromStreetIfHouseNumberIsMissing() {
+        uboService.setMaxUbos(2);
+        List<MiraklAdditionalFieldValue> ubo1 = createMiraklAdditionalUboField("2", ImmutableSet.of("firstname","lastname","email", "streetname"), ImmutableMap.of("civility", "Mr"));
+        when(miraklShopMock.getAdditionalFieldValues()).thenReturn(ubo1);
+        when(miraklShopMock.getId()).thenReturn("shopCode");
+        when(shareholderMappingRepositoryMock.findOneByMiraklShopIdAndMiraklUboNumber("shopCode", 2)).thenReturn(Optional.empty());
+
+
+        final List<ShareholderContact> result = uboService.extractUbos(miraklShopMock);
+
+        Assertions.assertThat(result.size()).isOne();
+        final ShareholderContact shareholderContact = result.iterator().next();
+        Assertions.assertThat(shareholderContact.getName().getGender()).isEqualTo(Name.GenderEnum.MALE);
+        Assertions.assertThat(shareholderContact.getName().getFirstName()).isEqualTo("firstname2");
+        Assertions.assertThat(shareholderContact.getName().getLastName()).isEqualTo("lastname2");
+        Assertions.assertThat(shareholderContact.getEmail()).isEqualTo("email2");
+        Assertions.assertThat(shareholderContact.getAddress().getHouseNumberOrName()).isEqualTo("2");
+        Assertions.assertThat(shareholderContact.getPersonalData()).isNull();
         Assertions.assertThat(shareholderContact.getPhoneNumber()).isNull();
         Assertions.assertThat(shareholderContact.getShareholderCode()).isNull();
     }

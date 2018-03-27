@@ -176,6 +176,9 @@ shopService:
 
 mail.max.retries: 10
 
+
+extract.house.number.regex: "(\\d+)\\D*$"
+
 payoutService:
     subscriptionTransferCode: "TransferCode_1"
     liableAccountCode: ${ADYEN_LIABLE_ACCOUNT_CODE}
