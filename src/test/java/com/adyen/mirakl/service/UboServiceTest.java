@@ -36,8 +36,8 @@ public class UboServiceTest {
     private UboService uboService;
 
     private static final Map<String, String> UBO_FIELDS_ENUMS = ImmutableMap.of(
-        "civility", "Mr",
-        "phonetype", "MOBILE");
+        "civility", "mr",
+        "phonetype", "mobile");
 
     private static final Set<String> UBO_FIELDS = ImmutableSet.of(
         "firstname",

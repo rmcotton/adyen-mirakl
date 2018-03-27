@@ -55,9 +55,10 @@ public class UboService {
     public static final String PHONE_TYPE = "phonetype";
     public static final String PHONE_NUMBER = "phonenumber";
 
-    public final static Map<String, Name.GenderEnum> CIVILITY_TO_GENDER = ImmutableMap.<String, Name.GenderEnum>builder().put("Mr", Name.GenderEnum.MALE)
-        .put("Mrs", Name.GenderEnum.FEMALE)
-        .put("Miss", Name.GenderEnum.FEMALE)
+    public final static Map<String, Name.GenderEnum> CIVILITY_TO_GENDER = ImmutableMap.<String, Name.GenderEnum>builder()
+        .put("MR", Name.GenderEnum.MALE)
+        .put("MRS", Name.GenderEnum.FEMALE)
+        .put("MISS", Name.GenderEnum.FEMALE)
         .build();
 
     private Pattern houseNumberPattern;
@@ -231,7 +232,7 @@ public class UboService {
 
     private void addMandatoryData(final String civility, final String firstName, final String lastName, final String email, final ShareholderContact shareholderContact) {
         Name name = new Name();
-        name.setGender(CIVILITY_TO_GENDER.getOrDefault(civility, Name.GenderEnum.UNKNOWN));
+        name.setGender(CIVILITY_TO_GENDER.getOrDefault(civility.toUpperCase(), Name.GenderEnum.UNKNOWN));
         name.setFirstName(firstName);
         name.setLastName(lastName);
         shareholderContact.setName(name);
@@ -243,7 +244,7 @@ public class UboService {
             final PhoneNumber phoneNumberWrapper = new PhoneNumber();
             Optional.ofNullable(phoneCountryCode).ifPresent(phoneNumberWrapper::setPhoneCountryCode);
             Optional.ofNullable(phoneNumber).ifPresent(phoneNumberWrapper::setPhoneNumber);
-            Optional.ofNullable(phoneType).ifPresent(x -> phoneNumberWrapper.setPhoneType(PhoneNumber.PhoneTypeEnum.valueOf(x)));
+            Optional.ofNullable(phoneType).ifPresent(x -> phoneNumberWrapper.setPhoneType(PhoneNumber.PhoneTypeEnum.valueOf(x.toUpperCase())));
             shareholderContact.setPhoneNumber(phoneNumberWrapper);
         } else {
             log.warn("Unable to populate any phone data for share holder {}", uboNumber);
