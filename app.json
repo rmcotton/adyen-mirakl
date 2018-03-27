@@ -27,6 +27,10 @@
     "ADYEN_PASS" : {
       "description": "Password for Adyen Web Service API User found:  https://ca-test.adyen.com/ca/ca/config/users.shtml"
     },
+    "ADYEN_LIABLE_ACCOUNT_CODE" : {
+      "description": "Liable Account Code for the Operator (format LiableAccountHolder{account})",
+      "value": "LiableAccountHolder<account>"  
+    },
     "MIRAKL_ENV_URL": {
       "description": "The base URL of your Mirakl Environment",
       "value": "https://<yourproject>-dev.mirakl.net"
