@@ -64,7 +64,6 @@ public class ConnectorAppAdyenSteps extends StepDefs {
         }
     }
 
-
     @When("^the IDENTITY_VERIFICATION notifications containing INVALID_DATA status are sent to the Connector for each UBO$")
     public void theIDENTITY_VERIFICATIONNotificationsAreSentToTheConnector() throws Throwable {
         List<String> notifications = new LinkedList<>();
@@ -107,5 +106,15 @@ public class ConnectorAppAdyenSteps extends StepDefs {
             .content(notification))
             .andExpect(status().is(201));
         log.info("Notification posted to Connector: [%s]", notification);
+    }
+
+    @When("^the notification is sent to the Connector$")
+    public void theNotificationIsSentToTheConnector() throws Throwable {
+        DocumentContext  notification = (DocumentContext)cucumberMap.get("notification");
+        restAdyenNotificationMockMvc.perform(post("/api/adyen-notifications")
+            .contentType(TestUtil.APPLICATION_JSON_UTF8)
+            .content(notification.jsonString()))
+            .andExpect(status().is(201));
+        log.info(String.format("Notification posted to Connector: [%s]", notification.jsonString()));
     }
 }

@@ -62,11 +62,19 @@ public class RestAssuredAdyenApi {
             Map contentMap = JsonPath.parse(notification).read("content");
             DocumentContext content = JsonPath.parse(contentMap);
             Assertions.assertThat(JsonPath.parse(notification).read("eventType").toString()).isNotEmpty();
-            if (JsonPath.parse(notification).read("eventType").toString().equals(eventType) &&
-                content.read("accountHolderCode").equals(miraklShopId) &&
-                content.read("verificationType").equals(verificationType)) {
-                notifications.add(JsonPath.parse(notification));
+            if (verificationType != null) {
+                if (JsonPath.parse(notification).read("eventType").toString().equals(eventType) &&
+                    content.read("accountHolderCode").equals(miraklShopId) &&
+                    content.read("verificationType").equals(verificationType)) {
+                    notifications.add(JsonPath.parse(notification));
+                }
+            } else {
+                if (JsonPath.parse(notification).read("eventType").toString().equals(eventType) &&
+                    content.read("accountHolderCode").equals(miraklShopId)) {
+                    notifications.add(JsonPath.parse(notification));
+                }
             }
+
         }
         return notifications.build();
     }

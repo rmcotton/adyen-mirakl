@@ -39,8 +39,10 @@ public class MiraklAdyenSteps extends StepDefsHelper {
     private MiraklShop shop;
     private DocumentContext notificationResponse;
     private String accountHolderCode;
+    private List<DocumentContext> notifications;
     private DocumentContext adyenNotificationBody;
     private GetUploadedDocumentsResponse uploadedDocuments;
+
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     @Given("^a shop has been created in Mirakl for an (.*) with Bank Information$")
@@ -179,19 +181,6 @@ public class MiraklAdyenSteps extends StepDefsHelper {
             Assertions
                 .assertThat(assertionHelper.getParsedBankAccountDetail().read("bankAccountUUID").toString())
                 .isNotEmpty();
-        });
-    }
-
-    @And("^(?:the previous BankAccountDetail will be removed|a notification will be sent in relation to the balance change)$")
-    public void thePreviousBankAccountDetailWillBeRemoved(DataTable table) {
-        List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
-        String eventType = cucumberTable.get(0).get("eventType");
-        String reason = cucumberTable.get(0).get("reason");
-
-        await().untilAsserted(() -> {
-            adyenNotificationBody = JsonPath.parse(retrieveAdyenNotificationBody(eventType, accountHolderCode));
-            Assertions.assertThat(adyenNotificationBody.read("content.reason").toString())
-                .contains(reason);
         });
     }
 
@@ -462,6 +451,13 @@ public class MiraklAdyenSteps extends StepDefsHelper {
         transferAccountHolderBalance(cucumberTable, shop);
     }
 
+    @When("^the accountHolders balance is increased beyond the tier level$")
+    public void theAccountHoldersBalanceIsIncreasedBeyondTheTierLevel(DataTable table) throws Throwable {
+        List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
+        accountHolderCode = shop.getId();
+        transferAccountHolderBalanceBeyondTier(cucumberTable, shop);
+    }
+
     @And("^the failed payout record is removed from the Connector database$")
     public void theFailedPayoutRecordIsRemovedFromTheConnectorDatabase() throws Throwable {
         List<AdyenPayoutError> byAccountHolderCode = adyenPayoutErrorRepository.findByAccountHolderCode(this.accountHolderCode);
@@ -551,6 +547,88 @@ public class MiraklAdyenSteps extends StepDefsHelper {
     @And("^a passport has been uploaded to Adyen$")
     public void aPassportHasBeenUploadedToAdyen() throws Throwable {
         uploadPassportToAdyen(this.shop);
+    }
+
+    @And("^a notification will be sent in relation to the balance change$")
+    public void aNotficationWillBeSentInRelationToTheBalanceChange(DataTable table) {
+        List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
+        String eventType = cucumberTable.get(0).get("eventType");
+        String reason = cucumberTable.get(0).get("reason");
+        String allowPayout = cucumberTable.get(0).get("previousPayoutState");
+
+        waitForNotification();
+        await().untilAsserted(() -> {
+            notifications = restAssuredAdyenApi
+                .getMultipleAdyenNotificationBodies(startUpTestingHook.getBaseRequestBinUrlPath(), shop.getId(), eventType, null);
+
+            Assertions.assertThat(notifications).isNotEmpty();
+            boolean foundReason = notifications.stream()
+                .anyMatch(notification -> notification.read("content.reason").toString().contains(reason) &&
+                notification.read("content.oldStatus.payoutState.allowPayout").equals(allowPayout));
+            Assertions.assertThat(foundReason).isTrue();
+
+            for (DocumentContext notification : notifications) {
+                String notificationReason = notification.read("content.reason").toString();
+                if (notificationReason.contains(reason) &&
+                    notification.read("content.oldStatus.payoutState.allowPayout").equals(allowPayout)) {
+                    adyenNotificationBody = notification;
+                    break;
+                }
+            }
+            cucumberMap.clear();
+            cucumberMap.put("notification", adyenNotificationBody);
+        });
+    }
+
+    @And("^the previous BankAccountDetail will be removed$")
+    public void thePreviousBankAccountDetailWillBeRemoved(DataTable table) {
+        List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
+        String eventType = cucumberTable.get(0).get("eventType");
+        String reason = cucumberTable.get(0).get("reason");
+
+        waitForNotification();
+        await().untilAsserted(() -> {
+            notifications = restAssuredAdyenApi
+                .getMultipleAdyenNotificationBodies(startUpTestingHook.getBaseRequestBinUrlPath(), shop.getId(), eventType, null);
+
+            Assertions.assertThat(notifications).isNotEmpty();
+            boolean foundReason = notifications.stream()
+                .anyMatch(notification -> notification.read("content.reason").toString().contains(reason));
+            Assertions.assertThat(foundReason).isTrue();
+
+            for (DocumentContext notification : notifications) {
+                String notificationReason = notification.read("content.reason").toString();
+                if (notificationReason.contains(reason)) {
+                    Assertions.assertThat(notificationReason.contains(reason));
+                    break;
+                }
+            }
+        });
+    }
+
+
+    @When("^the PayoutState allowPayout changes from false to true$")
+    public void thePayoutStateAllowPayoutChangesFromFalseToTrue() {
+        await().untilAsserted(() -> {
+            GetAccountHolderResponse account = getGetAccountHolderResponse(this.shop);
+            Boolean allowPayout = account.getAccountHolderStatus().getPayoutState().getAllowPayout();
+            Assertions
+                .assertThat(allowPayout)
+                .isTrue();
+            log.info(String.format("Payout status is [%s]", allowPayout.toString()));
+        });
+    }
+
+    @When("^the PayoutState allowPayout changes from true to false$")
+    public void thePayoutStateAllowPayoutChangesFromTrueToFalse() throws Throwable {
+        await().untilAsserted(() -> {
+            GetAccountHolderResponse account = getGetAccountHolderResponse(this.shop);
+            Boolean allowPayout = account.getAccountHolderStatus().getPayoutState().getAllowPayout();
+            Assertions
+                .assertThat(allowPayout)
+                .isFalse();
+            log.info(String.format("Payout status is [%s]", allowPayout.toString()));
+        });
     }
 
     @Then("^a remedial email will be sent for each ubo$")
@@ -665,8 +743,8 @@ public class MiraklAdyenSteps extends StepDefsHelper {
         });
     }
 
-    @And("^the accountHolder PayoutState is true$")
-    public void theAccountHolderPayoutStateIsTrue(DataTable table) throws Throwable {
+    @And("^the accountHolder receives balance$")
+    public void theAccountHolderReceivesBalance(DataTable table) throws Throwable {
         List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
         uploadPassportToAdyen(this.shop);
         transferAccountHolderBalance(cucumberTable, shop);

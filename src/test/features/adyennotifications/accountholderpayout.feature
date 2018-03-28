@@ -11,6 +11,7 @@ Feature: Payout notifications for seller payout
         And the accountHolders balance is increased
             | transfer amount |
             | 9900            |
+        And the PayoutState allowPayout changes from false to true
         When a payment voucher is sent to the Connector
             | paymentVoucher                  |
             | PaymentVoucher_PayoutShop01.csv |
@@ -47,6 +48,7 @@ Feature: Payout notifications for seller payout
         When the accountHolders balance is increased
             | transfer amount |
             | 9900            |
+        And the PayoutState allowPayout changes from false to true
         Then the Connector will trigger payout retry
         And adyen will send the ACCOUNT_HOLDER_PAYOUT notification
             | currency | amount | statusCode | iban                   |
@@ -59,9 +61,10 @@ Feature: Payout notifications for seller payout
             | city   | bank name | iban                   | bankOwnerName | lastName |
             | PASSED | testBank  | GB26TEST40051512347366 | TestData      | TestData |
         And we process the data and push to Adyen
-        And the accountHolder PayoutState is true
+        And the accountHolder receives balance
             | transfer amount   |
             | <transfer amount> |
+        And the PayoutState allowPayout changes from false to true
         When a payment voucher is sent to the Connector
             | paymentVoucher                  |
             | PaymentVoucher_Subscription.csv |

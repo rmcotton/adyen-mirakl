@@ -171,6 +171,46 @@ public class StepDefsHelper {
 
         GetAccountHolderResponse accountHolder = getGetAccountHolderResponse(shop);
 
+        transferAmountAndAssert(transferAmount, accountHolder);
+
+        await().untilAsserted(() -> {
+            AccountHolderBalanceRequest accountHolderBalanceRequest = new AccountHolderBalanceRequest();
+            accountHolderBalanceRequest.setAccountHolderCode(shop.getId());
+            AccountHolderBalanceResponse balance = adyenFundService.AccountHolderBalance(accountHolderBalanceRequest);
+
+            Assertions
+                .assertThat(balance.getTotalBalance().getBalance()
+                    .stream()
+                    .map(Amount::getValue)
+                    .findAny().orElse(null))
+                .isEqualTo(transferAmount);
+        });
+        log.info(String.format("\nAmount transferred successfully to [%s]", shop.getId()));
+    }
+
+    protected void transferAccountHolderBalanceBeyondTier(List<Map<String, String>> cucumberTable, MiraklShop shop) throws Exception {
+        Long transferAmount = Long.valueOf(cucumberTable.get(0).get("transfer amount"));
+
+        GetAccountHolderResponse accountHolder = getGetAccountHolderResponse(shop);
+
+        transferAmountAndAssert(transferAmount, accountHolder);
+
+        await().untilAsserted(() -> {
+            AccountHolderBalanceRequest accountHolderBalanceRequest = new AccountHolderBalanceRequest();
+            accountHolderBalanceRequest.setAccountHolderCode(shop.getId());
+            AccountHolderBalanceResponse balance = adyenFundService.AccountHolderBalance(accountHolderBalanceRequest);
+
+            Assertions
+                .assertThat(balance.getTotalBalance().getBalance()
+                    .stream()
+                    .map(Amount::getValue)
+                    .findAny().orElse(null))
+                .isGreaterThan(transferAmount);
+        });
+        log.info(String.format("\nAmount transferred successfully to [%s]", shop.getId()));
+    }
+
+    private void transferAmountAndAssert(Long transferAmount, GetAccountHolderResponse accountHolder) {
         accountHolder.getAccounts().stream()
             .map(com.adyen.model.marketpay.Account::getAccountCode)
             .findAny()
@@ -189,25 +229,5 @@ public class StepDefsHelper {
                     .assertThat(response.getResultCode())
                     .isEqualTo("Received");
             });
-
-        await().untilAsserted(() -> {
-            AccountHolderBalanceRequest accountHolderBalanceRequest = new AccountHolderBalanceRequest();
-            accountHolderBalanceRequest.setAccountHolderCode(shop.getId());
-            AccountHolderBalanceResponse balance = adyenFundService.AccountHolderBalance(accountHolderBalanceRequest);
-
-            Assertions
-                .assertThat(balance.getTotalBalance().getBalance()
-                    .stream()
-                    .map(Amount::getValue)
-                    .findAny().orElse(null))
-                .isEqualTo(transferAmount);
-
-            GetAccountHolderResponse account = getGetAccountHolderResponse(shop);
-
-            Assertions
-                .assertThat(account.getAccountHolderStatus().getPayoutState().getAllowPayout())
-                .isTrue();
-        });
-        log.info(String.format("\nAmount transferred successfully to [%s]", shop.getId()));
     }
 }

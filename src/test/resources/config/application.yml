@@ -195,8 +195,8 @@ shopService:
 mail.max.retries: 10
 
 mailtrapConfig:
-    baseMailTrapUrl: https://heroku.mailtrap.io/api/v1/inboxes/
-    mailTrapInboxId: 343861
+    baseMailTrapUrl: https://mailtrap.io/api/v1/inboxes/
+    mailTrapInboxId: 356812
     apiToken: ${MAILTRAP_API_TOKEN}
 
 extract.house.number.regex: "(\\d+)\\D*$"
