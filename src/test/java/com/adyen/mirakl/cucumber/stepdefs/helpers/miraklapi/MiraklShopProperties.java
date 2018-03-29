@@ -164,6 +164,7 @@ class MiraklShopProperties extends AbstractMiraklShopSharedProperties {
             address.setLastname(row.get("lastName"));
             address.setStreet1(FAKER.address().streetAddress());
             address.setZipCode(FAKER.address().zipCode());
+            address.setState("Kent");
             createShop.setAddress(address);
         });
     }
