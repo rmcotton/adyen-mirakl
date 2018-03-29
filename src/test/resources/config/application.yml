@@ -121,6 +121,8 @@ application:
     payoutRetryCron: "0 */10 * * * ?"
     initialDeltaDaysBack: 0
     maxPayoutFailed: 10
+    houseNumbersRegex:
+        NL: "\\s([a-zA-Z]*\\d+[a-zA-Z]*)$"
 
 shops:
     shopIds:
@@ -199,8 +201,6 @@ mailtrapConfig:
     mailTrapInboxId: 356812
     apiToken: ${MAILTRAP_API_TOKEN}
 
-extract.house.number.regex: "(\\d+)\\D*$"
-
 payoutService:
-    subscriptionTransferCode: ${ADYEN_SUBSCRIPTION_TRANSFER_CODE}
+    subscriptionTransferCode: SUBSCRIPTION
     liableAccountCode: ${ADYEN_LIABLE_ACCOUNT_CODE}

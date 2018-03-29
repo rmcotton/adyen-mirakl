@@ -120,6 +120,8 @@ application:
     initialDeltaDaysBack: 0
     #how many retries can fail for payout
     maxPayoutFailed: 10
+    houseNumbersRegex:
+        NL: "\\s([a-zA-Z]*\\d+[a-zA-Z]*)$"
 
 miraklOperator:
     miraklEnvUrl: ${MIRAKL_ENV_URL}
@@ -177,8 +179,6 @@ shopService:
 mail.max.retries: 10
 
 
-extract.house.number.regex: "(\\d+)\\D*$"
-
 payoutService:
-    subscriptionTransferCode: "TransferCode_1"
+    subscriptionTransferCode: SUBSCRIPTION
     liableAccountCode: ${ADYEN_LIABLE_ACCOUNT_CODE}

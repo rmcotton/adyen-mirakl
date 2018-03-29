@@ -54,7 +54,7 @@ public class UboServiceTest {
         "phonecountry",
         "phonenumber");
 
-    @Mock
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private MiraklShop miraklShopMock;
     @Mock
     private ShareholderMappingRepository shareholderMappingRepositoryMock;
@@ -80,7 +80,7 @@ public class UboServiceTest {
 
     @Before
     public void setup(){
-        uboService.setHouseNumberPattern(Pattern.compile("(\\d+)\\D*$"));
+        uboService.setHouseNumberPatterns(ImmutableMap.of("NL", Pattern.compile("\\s([a-zA-Z]*\\d+[a-zA-Z]*)$")));
     }
 
     @Test
@@ -90,6 +90,7 @@ public class UboServiceTest {
         List<MiraklAdditionalFieldValue> ubo2 = createMiraklAdditionalUboField("2", UBO_FIELDS, UBO_FIELDS_ENUMS);
         List<MiraklAdditionalFieldValue> ubo3 = createMiraklAdditionalUboField("3", UBO_FIELDS, UBO_FIELDS_ENUMS);
         List<MiraklAdditionalFieldValue> ubo4 = createMiraklAdditionalUboField("4", UBO_FIELDS, UBO_FIELDS_ENUMS);
+
         final List<MiraklAdditionalFieldValue> additionalFields = Streams.concat(ubo1.stream(), ubo2.stream(), ubo3.stream(), ubo4.stream()).collect(Collectors.toList());
         when(miraklShopMock.getAdditionalFieldValues()).thenReturn(additionalFields);
         when(miraklShopMock.getId()).thenReturn("shopCode");
@@ -176,13 +177,20 @@ public class UboServiceTest {
     }
 
     @Test
-    public void shouldTakeFromStreetIfHouseNumberIsMissing() {
+    public void shouldTakeFromStreetIfHouseNumberIsMissingAndCountryRegexExistsForParsingStreetLine() {
         uboService.setMaxUbos(2);
-        List<MiraklAdditionalFieldValue> ubo1 = createMiraklAdditionalUboField("2", ImmutableSet.of("firstname","lastname","email", "streetname"), ImmutableMap.of("civility", "Mr"));
-        when(miraklShopMock.getAdditionalFieldValues()).thenReturn(ubo1);
-        when(miraklShopMock.getId()).thenReturn("shopCode");
-        when(shareholderMappingRepositoryMock.findOneByMiraklShopIdAndMiraklUboNumber("shopCode", 2)).thenReturn(Optional.empty());
+        List<MiraklAdditionalFieldValue> ubo1Start = createMiraklAdditionalUboField("2", ImmutableSet.of("firstname","lastname","email"), ImmutableMap.of("civility", "Mr"));
 
+        MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue additionalField = new MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue();
+        additionalField.setCode("adyen-ubo2-streetname");
+        additionalField.setValue("street abc 2");
+
+        final List<MiraklAdditionalFieldValue> ubo1WithStreet = Streams.concat(ubo1Start.stream(), ImmutableList.of(additionalField).stream()).collect(Collectors.toList());
+
+        when(miraklShopMock.getAdditionalFieldValues()).thenReturn(ubo1WithStreet);
+        when(miraklShopMock.getId()).thenReturn("shopCode");
+        when(miraklShopMock.getContactInformation().getCountry()).thenReturn("NLD");
+        when(shareholderMappingRepositoryMock.findOneByMiraklShopIdAndMiraklUboNumber("shopCode", 2)).thenReturn(Optional.empty());
 
         final List<ShareholderContact> result = uboService.extractUbos(miraklShopMock);
 

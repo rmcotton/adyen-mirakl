@@ -16,6 +16,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public abstract class AbstractMiraklShopSharedProperties {
 
     final static Faker FAKER = new Faker(new Locale("en-GB"));
+    final static Faker FAKERNL = new Faker(new Locale("nl"));
     final static Gson GSON = new Gson();
     protected String email = "adyen-mirakl-".concat(UUID.randomUUID().toString()).concat("@mailtrap.com");
     private final Map<Integer, String> CIVILITIES = ImmutableMap.<Integer, String>builder()

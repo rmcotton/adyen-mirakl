@@ -1,23 +1,35 @@
 package com.adyen.mirakl.config;
 
+import com.google.common.collect.ImmutableMap;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Properties specific to Adyen Mirakl Connector.
  * <p>
  * Properties are configured in the application.yml file. See {@link io.github.jhipster.config.JHipsterProperties} for a good example.
  */
+@Configuration
 @ConfigurationProperties(prefix = "application", ignoreUnknownFields = false)
 public class ApplicationProperties {
     private String miraklPullCron;
     private String emailRetryCron;
     private String removeSentEmailsCron;
-    private String docsUpdaterCron;
     private String payoutRetryCron;
     private Integer initialDeltaDaysBack;
     private Integer maxPayoutFailed;
+    private Map<String, String> houseNumbersRegex;
+
+    @Bean
+    public Map<String, Pattern> houseNumberPatterns(){
+        final ImmutableMap.Builder<String, Pattern> builder = ImmutableMap.builder();
+        houseNumbersRegex.forEach((k, v) -> builder.put(k, Pattern.compile(v)));
+        return builder.build();
+    }
 
     public String getMiraklPullCron() {
         return miraklPullCron;
@@ -65,5 +77,13 @@ public class ApplicationProperties {
 
     public void setMaxPayoutFailed(Integer maxPayoutFailed) {
         this.maxPayoutFailed = maxPayoutFailed;
+    }
+
+    public Map<String, String> getHouseNumbersRegex() {
+        return houseNumbersRegex;
+    }
+
+    public void setHouseNumbersRegex(final Map<String, String> houseNumbersRegex) {
+        this.houseNumbersRegex = houseNumbersRegex;
     }
 }

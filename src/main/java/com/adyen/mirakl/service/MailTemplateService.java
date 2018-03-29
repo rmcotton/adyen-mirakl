@@ -1,5 +1,6 @@
-package com.adyen.mirakl.config;
+package com.adyen.mirakl.service;
 
+import com.adyen.mirakl.config.Constants;
 import com.adyen.mirakl.service.MailService;
 import com.adyen.model.marketpay.ShareholderContact;
 import com.mirakl.client.mmp.domain.shop.MiraklShop;

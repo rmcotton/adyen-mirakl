@@ -32,7 +32,6 @@ class MiraklShopProperties extends AbstractMiraklShopSharedProperties {
     private String firstName = FAKER.name().firstName();
 
     void populatePaymentInformation(List<Map<String, String>> rows, MiraklCreateShop createShop) {
-
         rows.forEach(row -> {
             String owner;
             String bankName;
@@ -74,6 +73,33 @@ class MiraklShopProperties extends AbstractMiraklShopSharedProperties {
                     builder.add(createAdditionalField(uboKeys.get(i).get(UboService.ID_NUMBER), UUID.randomUUID().toString()));
                 }
                 builder.add(createAdditionalField("adyen-legal-entity-type", legalEntity));
+                builder.add(createAdditionalField("adyen-business-housenumber", FAKER.address().streetAddressNumber()));
+                createShop.setAdditionalFieldValues(builder.build());
+            }
+        });
+    }
+
+    void populateShareHolderDataForNetherlands(String legalEntity, List<Map<String, String>> rows, MiraklCreateShop createShop) {
+        rows.forEach(row -> {
+            maxUbos = row.get("maxUbos");
+            if (maxUbos != null) {
+                ImmutableList.Builder<MiraklRequestAdditionalFieldValue> builder = ImmutableList.builder();
+                for (int i = 1; i <= Integer.valueOf(maxUbos); i++) {
+
+                    Map<Integer, Map<String, String>> uboKeys = uboService.generateMiraklUboKeys(Integer.valueOf(maxUbos));
+                    buildShareHolderMinimumData(builder, i, uboKeys, civility());
+                    builder.add(createAdditionalField(uboKeys.get(i).get(UboService.COUNTRY), "NL"));
+                    builder.add(createAdditionalField(uboKeys.get(i).get(UboService.STREET), FAKERNL.address().streetName()+" "+FAKERNL.address().streetAddressNumber()));
+                    builder.add(createAdditionalField(uboKeys.get(i).get(UboService.CITY), FAKERNL.address().city()));
+                    builder.add(createAdditionalField(uboKeys.get(i).get(UboService.POSTAL_CODE), FAKERNL.address().zipCode()));
+                    builder.add(createAdditionalField(uboKeys.get(i).get(UboService.PHONE_COUNTRY_CODE), "NL"));
+                    builder.add(createAdditionalField(uboKeys.get(i).get(UboService.PHONE_NUMBER), FAKERNL.phoneNumber().phoneNumber()));
+                    builder.add(createAdditionalField(uboKeys.get(i).get(UboService.DATE_OF_BIRTH), dateOfBirth().toString()));
+                    builder.add(createAdditionalField(uboKeys.get(i).get(UboService.NATIONALITY), "NL"));
+                    builder.add(createAdditionalField(uboKeys.get(i).get(UboService.ID_NUMBER), UUID.randomUUID().toString()));
+                }
+                builder.add(createAdditionalField("adyen-legal-entity-type", legalEntity));
+                builder.add(createAdditionalField("adyen-business-housenumber", FAKER.address().streetAddressNumber()));
                 createShop.setAdditionalFieldValues(builder.build());
             }
         });
@@ -101,7 +127,7 @@ class MiraklShopProperties extends AbstractMiraklShopSharedProperties {
         });
     }
 
-    void buildShareHolderMinimumData(ImmutableList.Builder<MiraklRequestAdditionalFieldValue> builder, int i, Map<Integer, Map<String, String>> uboKeys, String civility) {
+    private void buildShareHolderMinimumData(ImmutableList.Builder<MiraklRequestAdditionalFieldValue> builder, int i, Map<Integer, Map<String, String>> uboKeys, String civility) {
         String email = "adyen-mirakl-".concat(UUID.randomUUID().toString()).concat("@mailtrap.com");
         builder.add(createAdditionalField(uboKeys.get(i).get(UboService.CIVILITY), civility));
         builder.add(createAdditionalField(uboKeys.get(i).get(UboService.FIRSTNAME), FAKER.name().firstName()));
@@ -120,20 +146,17 @@ class MiraklShopProperties extends AbstractMiraklShopSharedProperties {
     }
 
     void populateUserEmailAndShopName(MiraklCreateShop createShop, List<Map<String, String>> rows) {
-
         String shopName;
         if (rows.get(0).get("companyName") == null) {
             shopName = companyName.concat("-").concat(RandomStringUtils.randomAlphanumeric(8)).toLowerCase();
         } else {
             shopName = rows.get(0).get("companyName");
         }
-
         MiraklCreateShopNewUser newUser = new MiraklCreateShopNewUser();
         String email = "adyen-mirakl-".concat(UUID.randomUUID().toString()).concat("@mailtrap.com");
         newUser.setEmail(email);
         createShop.setNewUser(newUser);
         createShop.setEmail(email);
-
         log.info(String.format("\nShop name to create: [%s]", shopName));
         createShop.setName(shopName);
     }
@@ -158,7 +181,7 @@ class MiraklShopProperties extends AbstractMiraklShopSharedProperties {
 
             MiraklCreateShopAddress address = new MiraklCreateShopAddress();
             address.setCity(city);
-            address.setCivility("Mr");
+            address.setCivility(civility());
             address.setCountry("GBR");
             address.setFirstname(firstName);
             address.setLastname(row.get("lastName"));
@@ -167,6 +190,19 @@ class MiraklShopProperties extends AbstractMiraklShopSharedProperties {
             address.setState("Kent");
             createShop.setAddress(address);
         });
+    }
+
+    void populateMiraklAddressForNetherlands(MiraklCreateShop createShop) {
+        MiraklCreateShopAddress address = new MiraklCreateShopAddress();
+        address.setCity(FAKERNL.address().city());
+        address.setCivility(civility());
+        address.setCountry("NLD");
+        address.setFirstname(FAKERNL.name().firstName());
+        address.setLastname(FAKERNL.name().lastName());
+        address.setStreet1(FAKERNL.address().streetAddress());
+        address.setZipCode(FAKERNL.address().zipCode());
+        address.setState(FAKERNL.address().state());
+        createShop.setAddress(address);
     }
 
     void throwErrorIfShopIsNotCreated(MiraklCreatedShops shops) {

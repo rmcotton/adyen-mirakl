@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import com.adyen.constants.ErrorTypeCodes;
-import com.adyen.mirakl.config.MailTemplateService;
 import com.adyen.model.marketpay.ErrorFieldType;
 import com.google.common.collect.ImmutableList;
 import com.mirakl.client.mmp.domain.shop.MiraklShop;

@@ -1,11 +1,33 @@
 package com.adyen.mirakl.service;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+
+import com.adyen.mirakl.service.util.IsoUtil;
+import org.apache.commons.lang3.EnumUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import com.adyen.mirakl.domain.ShareholderMapping;
+import com.adyen.mirakl.domain.StreetDetails;
 import com.adyen.mirakl.repository.ShareholderMappingRepository;
 import com.adyen.mirakl.service.dto.UboDocumentDTO;
 import com.adyen.model.Address;
 import com.adyen.model.Name;
-import com.adyen.model.marketpay.*;
+import com.adyen.model.marketpay.DocumentDetail;
+import com.adyen.model.marketpay.GetAccountHolderResponse;
+import com.adyen.model.marketpay.PersonalData;
+import com.adyen.model.marketpay.PhoneNumber;
+import com.adyen.model.marketpay.ShareholderContact;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.mirakl.client.mmp.domain.common.MiraklAdditionalFieldValue;
@@ -14,23 +36,6 @@ import com.mirakl.client.mmp.domain.shop.MiraklShops;
 import com.mirakl.client.mmp.domain.shop.document.MiraklShopDocument;
 import com.mirakl.client.mmp.operator.core.MiraklMarketplacePlatformOperatorApiClient;
 import com.mirakl.client.mmp.request.shop.MiraklGetShopsRequest;
-import org.apache.commons.lang3.EnumUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Service
 public class UboService {
@@ -55,19 +60,13 @@ public class UboService {
     public static final String PHONE_TYPE = "phonetype";
     public static final String PHONE_NUMBER = "phonenumber";
 
-    public final static Map<String, Name.GenderEnum> CIVILITY_TO_GENDER = ImmutableMap.<String, Name.GenderEnum>builder()
-        .put("MR", Name.GenderEnum.MALE)
-        .put("MRS", Name.GenderEnum.FEMALE)
-        .put("MISS", Name.GenderEnum.FEMALE)
-        .build();
-
-    private Pattern houseNumberPattern;
+    public final static Map<String, Name.GenderEnum> CIVILITY_TO_GENDER = ImmutableMap.<String, Name.GenderEnum>builder().put("MR", Name.GenderEnum.MALE)
+                                                                                                                         .put("MRS", Name.GenderEnum.FEMALE)
+                                                                                                                         .put("MISS", Name.GenderEnum.FEMALE)
+                                                                                                                         .build();
 
     @Value("${shopService.maxUbos}")
     private Integer maxUbos = 4;
-
-    @Value("${extract.house.number.regex}")
-    private String houseNumberRegex;
 
     @Resource
     private ShareholderMappingRepository shareholderMappingRepository;
@@ -75,10 +74,8 @@ public class UboService {
     @Resource
     private MiraklMarketplacePlatformOperatorApiClient miraklMarketplacePlatformOperatorApiClient;
 
-    @PostConstruct
-    public void postConstruct() {
-        houseNumberPattern = Pattern.compile(houseNumberRegex);
-    }
+    @Resource
+    private Map<String, Pattern> houseNumberPatterns;
 
     /**
      * Extract shareholder contact data in a adyen format from a mirakl shop
@@ -88,11 +85,11 @@ public class UboService {
      */
     public List<ShareholderContact> extractUbos(final MiraklShop shop, final GetAccountHolderResponse existingAccountHolder) {
         Map<String, String> extractedKeysFromMirakl = shop.getAdditionalFieldValues()
-            .stream()
-            .filter(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::isInstance)
-            .map(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::cast)
-            .collect(Collectors.toMap(MiraklAdditionalFieldValue::getCode,
-                MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue::getValue));
+                                                          .stream()
+                                                          .filter(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::isInstance)
+                                                          .map(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue.class::cast)
+                                                          .collect(Collectors.toMap(MiraklAdditionalFieldValue::getCode,
+                                                                                    MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue::getValue));
 
         ImmutableList.Builder<ShareholderContact> builder = ImmutableList.builder();
         generateMiraklUboKeys(maxUbos).forEach((uboNumber, uboKeys) -> {
@@ -118,7 +115,7 @@ public class UboService {
                 addShareholderCode(shop, uboNumber, shareholderContact, existingAccountHolder);
                 addMandatoryData(civility, firstName, lastName, email, shareholderContact);
                 addPersonalData(uboNumber, dateOfBirth, nationality, idNumber, shareholderContact);
-                addAddressData(uboNumber, houseNumberOrName, street, city, postalCode, country, shareholderContact);
+                addAddressData(uboNumber, houseNumberOrName, street, city, postalCode, country, shareholderContact, shop.getContactInformation().getCountry());
                 addPhoneData(uboNumber, phoneCountryCode, phoneType, phoneNumber, shareholderContact);
                 builder.add(shareholderContact);
             }
@@ -145,20 +142,23 @@ public class UboService {
         String photoIdRear = ADYEN_UBO + uboNumber + "-photoid-rear";
         if (miraklShopDocument.getTypeCode().equalsIgnoreCase(photoIdFront)) {
             final Map<Boolean, DocumentDetail.DocumentTypeEnum> documentTypeEnum = findCorrectEnum(internalMemoryForDocs, miraklShopDocument, uboNumber, "_FRONT");
-            if(documentTypeEnum!=null){
+            if (documentTypeEnum != null) {
                 addUboDocumentDTO(builder, miraklShopDocument, uboNumber, documentTypeEnum);
             }
         }
-        if(miraklShopDocument.getTypeCode().equalsIgnoreCase(photoIdRear)){
+        if (miraklShopDocument.getTypeCode().equalsIgnoreCase(photoIdRear)) {
             final Map<Boolean, DocumentDetail.DocumentTypeEnum> documentTypeEnum = findCorrectEnum(internalMemoryForDocs, miraklShopDocument, uboNumber, "_BACK");
             //ignore if the result is could not convert to enum with suffix
-            if(documentTypeEnum != null && documentTypeEnum.keySet().iterator().next()){
+            if (documentTypeEnum != null && documentTypeEnum.keySet().iterator().next()) {
                 addUboDocumentDTO(builder, miraklShopDocument, uboNumber, documentTypeEnum);
             }
         }
     }
 
-    private void addUboDocumentDTO(final ImmutableList.Builder<UboDocumentDTO> builder, final MiraklShopDocument miraklShopDocument, final int uboNumber, final Map<Boolean, DocumentDetail.DocumentTypeEnum> documentTypeEnum) {
+    private void addUboDocumentDTO(final ImmutableList.Builder<UboDocumentDTO> builder,
+                                   final MiraklShopDocument miraklShopDocument,
+                                   final int uboNumber,
+                                   final Map<Boolean, DocumentDetail.DocumentTypeEnum> documentTypeEnum) {
         final UboDocumentDTO uboDocumentDTO = new UboDocumentDTO();
         uboDocumentDTO.setDocumentTypeEnum(documentTypeEnum.values().iterator().next());
         uboDocumentDTO.setMiraklShopDocument(miraklShopDocument);
@@ -167,15 +167,20 @@ public class UboService {
     }
 
     private String getShareholderCode(final int uboNumber, final String shopId) {
-        return shareholderMappingRepository.findOneByMiraklShopIdAndMiraklUboNumber(shopId, uboNumber).orElseThrow(() -> new IllegalStateException("No UBO mapping for "+ shopId + uboNumber)).getAdyenShareholderCode();
+        return shareholderMappingRepository.findOneByMiraklShopIdAndMiraklUboNumber(shopId, uboNumber)
+                                           .orElseThrow(() -> new IllegalStateException("No UBO mapping for " + shopId + uboNumber))
+                                           .getAdyenShareholderCode();
     }
 
-    private Map<Boolean, DocumentDetail.DocumentTypeEnum> findCorrectEnum(final Map<String, String> internalMemoryForDocs, final MiraklShopDocument miraklShopDocument, final int uboNumber, String suffix) {
+    private Map<Boolean, DocumentDetail.DocumentTypeEnum> findCorrectEnum(final Map<String, String> internalMemoryForDocs,
+                                                                          final MiraklShopDocument miraklShopDocument,
+                                                                          final int uboNumber,
+                                                                          String suffix) {
         String documentType = retrieveUboPhotoIdType(uboNumber, miraklShopDocument.getShopId(), internalMemoryForDocs);
-        if(documentType!=null){
-            if(EnumUtils.isValidEnum(DocumentDetail.DocumentTypeEnum.class, documentType+suffix)){
-                return ImmutableMap.of(true, DocumentDetail.DocumentTypeEnum.valueOf(documentType+suffix));
-            }else{
+        if (documentType != null) {
+            if (EnumUtils.isValidEnum(DocumentDetail.DocumentTypeEnum.class, documentType + suffix)) {
+                return ImmutableMap.of(true, DocumentDetail.DocumentTypeEnum.valueOf(documentType + suffix));
+            } else {
                 return ImmutableMap.of(false, DocumentDetail.DocumentTypeEnum.valueOf(documentType));
             }
         }
@@ -186,7 +191,7 @@ public class UboService {
         String documentTypeEnum = internalMemory.getOrDefault(shopId + "_" + uboNumber, null);
         if (documentTypeEnum == null) {
             String docTypeFromMirakl = getDocTypeFromMirakl(uboNumber, shopId);
-            if(docTypeFromMirakl!=null){
+            if (docTypeFromMirakl != null) {
                 internalMemory.put(shopId + "_" + uboNumber, docTypeFromMirakl);
                 return docTypeFromMirakl;
             }
@@ -200,10 +205,12 @@ public class UboService {
         MiraklShops shops = miraklMarketplacePlatformOperatorApiClient.getShops(request);
         MiraklShop shop = shops.getShops().iterator().next();
         String code = ADYEN_UBO + uboNumber + "-photoidtype";
-        Optional<MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue> photoIdType = shop.getAdditionalFieldValues().stream()
-            .filter(MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue.class::isInstance)
-            .map(MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue.class::cast)
-            .filter(x -> code.equalsIgnoreCase(x.getCode())).findAny();
+        Optional<MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue> photoIdType = shop.getAdditionalFieldValues()
+                                                                                                   .stream()
+                                                                                                   .filter(MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue.class::isInstance)
+                                                                                                   .map(MiraklAdditionalFieldValue.MiraklValueListAdditionalFieldValue.class::cast)
+                                                                                                   .filter(x -> code.equalsIgnoreCase(x.getCode()))
+                                                                                                   .findAny();
         return photoIdType.map(MiraklAdditionalFieldValue.MiraklAbstractAdditionalFieldWithSingleValue::getValue).orElse(null);
     }
 
@@ -213,9 +220,11 @@ public class UboService {
 
     private void addShareholderCode(final MiraklShop shop, final Integer uboNumber, final ShareholderContact shareholderContact, final GetAccountHolderResponse existingAccountHolder) {
         final Optional<ShareholderMapping> mapping = shareholderMappingRepository.findOneByMiraklShopIdAndMiraklUboNumber(shop.getId(), uboNumber);
-        if (!mapping.isPresent() && existingAccountHolder != null && existingAccountHolder.getAccountHolderDetails() != null
+        if (! mapping.isPresent()
+            && existingAccountHolder != null
+            && existingAccountHolder.getAccountHolderDetails() != null
             && existingAccountHolder.getAccountHolderDetails().getBusinessDetails() != null
-            && !CollectionUtils.isEmpty(existingAccountHolder.getAccountHolderDetails().getBusinessDetails().getShareholders())) {
+            && ! CollectionUtils.isEmpty(existingAccountHolder.getAccountHolderDetails().getBusinessDetails().getShareholders())) {
             final List<ShareholderContact> shareholders = existingAccountHolder.getAccountHolderDetails().getBusinessDetails().getShareholders();
             if (uboNumber - 1 < shareholders.size()) {
                 final ShareholderMapping shareholderMapping = new ShareholderMapping();
@@ -251,15 +260,21 @@ public class UboService {
         }
     }
 
-    private void addAddressData(final Integer uboNumber, final String houseNumberOrName, final String street, final String city, final String postalCode, final String country, final ShareholderContact shareholderContact) {
+    private void addAddressData(final Integer uboNumber,
+                                final String houseNumberOrName,
+                                final String street,
+                                final String city,
+                                final String postalCode,
+                                final String country,
+                                final ShareholderContact shareholderContact, final String contactCountry) {
         if (country != null || street != null || houseNumberOrName != null || city != null || postalCode != null) {
             final Address address = new Address();
-            if(houseNumberOrName!=null){
-                address.setHouseNumberOrName(houseNumberOrName);
-            }else{
-                address.setHouseNumberOrName(getHouseNumberFromStreet(street));
-            }
-            Optional.ofNullable(street).ifPresent(address::setStreet);
+
+            StreetDetails streetDetails = StreetDetails.createStreetDetailsFromSingleLine(houseNumberOrName, street, houseNumberPatterns.get(IsoUtil.getIso2CountryCodeFromIso3(contactCountry)));
+
+            address.setStreet(streetDetails.getStreetName());
+            address.setHouseNumberOrName(streetDetails.getHouseNumberOrName());
+
             Optional.ofNullable(city).ifPresent(address::setCity);
             Optional.ofNullable(postalCode).ifPresent(address::setPostalCode);
             Optional.ofNullable(country).ifPresent(address::setCountry);
@@ -290,23 +305,23 @@ public class UboService {
     public Map<Integer, Map<String, String>> generateMiraklUboKeys(Integer maxUbos) {
         return IntStream.rangeClosed(1, maxUbos).mapToObj(i -> {
             final Map<Integer, Map<String, String>> grouped = new HashMap<>();
-            grouped.put(i, new ImmutableMap.Builder<String, String>()
-                .put(CIVILITY, ADYEN_UBO + String.valueOf(i) + "-civility")
-                .put(FIRSTNAME, ADYEN_UBO + String.valueOf(i) + "-firstname")
-                .put(LASTNAME, ADYEN_UBO + String.valueOf(i) + "-lastname")
-                .put(EMAIL, ADYEN_UBO + String.valueOf(i) + "-email")
-                .put(DATE_OF_BIRTH, ADYEN_UBO + String.valueOf(i) + "-dob")
-                .put(NATIONALITY, ADYEN_UBO + String.valueOf(i) + "-nationality")
-                .put(ID_NUMBER, ADYEN_UBO + String.valueOf(i) + "-idnumber")
-                .put(HOUSE_NUMBER_OR_NAME, ADYEN_UBO + String.valueOf(i) + "-housenumber")
-                .put(STREET, ADYEN_UBO + String.valueOf(i) + "-streetname")
-                .put(CITY, ADYEN_UBO + String.valueOf(i) + "-city")
-                .put(POSTAL_CODE, ADYEN_UBO + String.valueOf(i) + "-zip")
-                .put(COUNTRY, ADYEN_UBO + String.valueOf(i) + "-country")
-                .put(PHONE_COUNTRY_CODE, ADYEN_UBO + String.valueOf(i) + "-phonecountry")
-                .put(PHONE_TYPE, ADYEN_UBO + String.valueOf(i) + "-phonetype")
-                .put(PHONE_NUMBER, ADYEN_UBO + String.valueOf(i) + "-phonenumber")
-                .build());
+            grouped.put(i,
+                        new ImmutableMap.Builder<String, String>().put(CIVILITY, ADYEN_UBO + String.valueOf(i) + "-civility")
+                                                                  .put(FIRSTNAME, ADYEN_UBO + String.valueOf(i) + "-firstname")
+                                                                  .put(LASTNAME, ADYEN_UBO + String.valueOf(i) + "-lastname")
+                                                                  .put(EMAIL, ADYEN_UBO + String.valueOf(i) + "-email")
+                                                                  .put(DATE_OF_BIRTH, ADYEN_UBO + String.valueOf(i) + "-dob")
+                                                                  .put(NATIONALITY, ADYEN_UBO + String.valueOf(i) + "-nationality")
+                                                                  .put(ID_NUMBER, ADYEN_UBO + String.valueOf(i) + "-idnumber")
+                                                                  .put(HOUSE_NUMBER_OR_NAME, ADYEN_UBO + String.valueOf(i) + "-housenumber")
+                                                                  .put(STREET, ADYEN_UBO + String.valueOf(i) + "-streetname")
+                                                                  .put(CITY, ADYEN_UBO + String.valueOf(i) + "-city")
+                                                                  .put(POSTAL_CODE, ADYEN_UBO + String.valueOf(i) + "-zip")
+                                                                  .put(COUNTRY, ADYEN_UBO + String.valueOf(i) + "-country")
+                                                                  .put(PHONE_COUNTRY_CODE, ADYEN_UBO + String.valueOf(i) + "-phonecountry")
+                                                                  .put(PHONE_TYPE, ADYEN_UBO + String.valueOf(i) + "-phonetype")
+                                                                  .put(PHONE_NUMBER, ADYEN_UBO + String.valueOf(i) + "-phonenumber")
+                                                                  .build());
             return grouped;
         }).reduce((x, y) -> {
             x.put(y.entrySet().iterator().next().getKey(), y.entrySet().iterator().next().getValue());
@@ -318,22 +333,7 @@ public class UboService {
         this.maxUbos = maxUbos;
     }
 
-    /**
-     * Finds a number in the string street starting at the end of the string e.g.
-     * 1 street name house 5
-     * returns 5
-     */
-    private String getHouseNumberFromStreet(String street) {
-        Matcher matcher = houseNumberPattern.matcher(street);
-        if (matcher.find()) {
-            return matcher.group(1);
-        }else{
-            log.warn("Unable to retrieve house number from street: {}", street);
-            return null;
-        }
-    }
-
-    public void setHouseNumberPattern(final Pattern houseNumberPattern) {
-        this.houseNumberPattern = houseNumberPattern;
+    public void setHouseNumberPatterns(final Map<String, Pattern> houseNumberPatterns) {
+        this.houseNumberPatterns = houseNumberPatterns;
     }
 }

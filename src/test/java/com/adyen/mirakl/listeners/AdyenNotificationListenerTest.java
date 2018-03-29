@@ -1,6 +1,6 @@
 package com.adyen.mirakl.listeners;
 
-import com.adyen.mirakl.config.MailTemplateService;
+import com.adyen.mirakl.service.MailTemplateService;
 import com.adyen.mirakl.domain.AdyenNotification;
 import com.adyen.mirakl.events.AdyenNotifcationEvent;
 import com.adyen.mirakl.repository.AdyenNotificationRepository;

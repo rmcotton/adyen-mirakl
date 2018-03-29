@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static junit.framework.TestCase.fail;
 import static org.awaitility.Awaitility.await;
 
 public class MiraklAdyenSteps extends StepDefsHelper {
@@ -101,6 +100,13 @@ public class MiraklAdyenSteps extends StepDefsHelper {
         shop = retrieveCreatedShop(shops);
 
         cucumberMap.put("createdShop", shop);
+    }
+
+    @Given("^a Netherlands seller creates a (.*) shop in Mirakl with UBO data and a bankAccount$")
+    public void aNetherlandsSellerCreatedABusinessShopInMiraklWithUBODataAndABankAccount(String legalEntity, DataTable table) {
+        List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
+        MiraklCreatedShops shops = miraklShopApi.createBusinessShopForNetherlandsWithUBOs(miraklMarketplacePlatformOperatorApiClient, cucumberTable, legalEntity);
+        shop = retrieveCreatedShop(shops);
     }
 
     @When("^the seller uploads a Bank Statement in Mirakl$")
@@ -336,14 +342,15 @@ public class MiraklAdyenSteps extends StepDefsHelper {
     public void anAccountHolderWillBeCreatedInAdyenWithStatusActive() throws Throwable {
         GetAccountHolderRequest accountHolderRequest = new GetAccountHolderRequest();
         accountHolderRequest.setAccountHolderCode(shop.getId());
-
-        try {
-            GetAccountHolderResponse accountHolderResponse = adyenAccountService.getAccountHolder(accountHolderRequest);
-            Assertions.assertThat(accountHolderResponse.getAccountHolderStatus().getStatus().toString()).isEqualTo("Active");
-        } catch (ApiException e) {
-            log.error("Failing test due to exception", e);
-            fail(e.getError().toString());
-        }
+        await().untilAsserted(() -> {
+            try {
+                GetAccountHolderResponse accountHolderResponse = adyenAccountService.getAccountHolder(accountHolderRequest);
+                Assertions.assertThat(accountHolderResponse.getAccountHolderStatus().getStatus().toString()).isEqualTo("Active");
+            } catch (ApiException e) {
+                log.error("Failing test due to exception", e);
+                Assertions.fail(e.getError().toString());
+            }
+        });
     }
 
     @And("^a notification will be sent pertaining to (.*)$")
@@ -387,8 +394,18 @@ public class MiraklAdyenSteps extends StepDefsHelper {
     public void theShopDataIsCorrectlyMappedToTheAdyenBusinessAccount(DataTable table) {
         List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
 
-        ImmutableList<String> adyen = assertionHelper.adyenShareHolderAccountDataBuilder(notificationResponse).build();
+        ImmutableList<String> adyen = assertionHelper.adyenShareHolderAccountDataBuilder(shop, notificationResponse).build();
         ImmutableList<String> mirakl = assertionHelper.miraklShopShareHolderDataBuilder(shop, cucumberTable).build();
+        Assertions.assertThat(adyen).containsAll(mirakl);
+    }
+
+    @And("^the netherlands shop data is correctly mapped to the Adyen Business Account$")
+    public void theNetherlandsShopDataIsCorrectlyMappedToTheAdyenBusinessAccount(DataTable table) {
+        List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
+
+        ImmutableList<String> adyen = assertionHelper.adyenShareHolderAccountDataBuilder(shop, notificationResponse).build();
+        ImmutableList<String> mirakl = assertionHelper.miraklShopShareHolderDataBuilder(shop, cucumberTable).build();
+
         Assertions.assertThat(adyen).containsAll(mirakl);
     }
 
@@ -564,7 +581,7 @@ public class MiraklAdyenSteps extends StepDefsHelper {
             Assertions.assertThat(notifications).isNotEmpty();
             boolean foundReason = notifications.stream()
                 .anyMatch(notification -> notification.read("content.reason").toString().contains(reason) &&
-                notification.read("content.oldStatus.payoutState.allowPayout").equals(allowPayout));
+                    notification.read("content.oldStatus.payoutState.allowPayout").equals(allowPayout));
             Assertions.assertThat(foundReason).isTrue();
 
             for (DocumentContext notification : notifications) {
@@ -700,8 +717,6 @@ public class MiraklAdyenSteps extends StepDefsHelper {
                 .assertThat(notifications)
                 .withFailMessage("Notification is empty.")
                 .isNotEmpty();
-            Integer maxUbos = cucumberTable.get(0).get("maxUbos");
-            Assertions.assertThat(notifications).hasSize(maxUbos);
 
             for (DocumentContext notification : notifications) {
                 Assertions
@@ -726,7 +741,6 @@ public class MiraklAdyenSteps extends StepDefsHelper {
                 .getMultipleAdyenTransferNotifications(startUpCucumberHook.getBaseRequestBinUrlPath(), eventType, subscriptionTransferCode);
 
             Assertions.assertThat(notificationBodies).isNotEmpty();
-            Assertions.assertThat(notificationBodies.size()).isGreaterThan(1);
 
             DocumentContext transferNotification = null;
             for (DocumentContext notification : notificationBodies) {
@@ -748,5 +762,15 @@ public class MiraklAdyenSteps extends StepDefsHelper {
         List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
         uploadPassportToAdyen(this.shop);
         transferAccountHolderBalance(cucumberTable, shop);
+    }
+
+    @And("^the Adyen bankAccountDetails will posses the correct street data$")
+    public void theAdyenBankAccountDetailsWillPossesTheCorrectStreetData() {
+        String ownerStreet = notificationResponse.read("content.accountHolderDetails.bankAccountDetails[0]BankAccountDetail.ownerStreet").toString();
+        String ownerHouseNumberOrName = notificationResponse.read("content.accountHolderDetails.bankAccountDetails[0]BankAccountDetail.ownerHouseNumberOrName").toString();
+
+        Assertions
+            .assertThat(ownerStreet+" "+ownerHouseNumberOrName)
+            .contains(shop.getContactInformation().getStreet1());
     }
 }

@@ -45,3 +45,16 @@ Feature: Seller Account Management
             | TestData |
         When we process the data and push to Adyen
         Then no account holder is created in Adyen
+
+    @ADY-70
+    Scenario: The connector will strip out the house name or number for Netherlands addresses
+        Given a Netherlands seller creates a Business shop in Mirakl with UBO data and a bankAccount
+            | city   | bank name | iban                   | bankOwnerName | lastName | maxUbos |
+            | PASSED | testBank  | GB26TEST40051512347366 | TestData      | TestData | 4       |
+        When we process the data and push to Adyen
+        Then an AccountHolder will be created in Adyen with status Active
+        And a notification will be sent pertaining to ACCOUNT_HOLDER_CREATED
+        And the netherlands shop data is correctly mapped to the Adyen Business Account
+            | maxUbos |
+            | 4       |
+        And the Adyen bankAccountDetails will posses the correct street data

@@ -62,6 +62,16 @@ public class MiraklShopApi extends MiraklShopProperties {
         return createMiraklShopRequest(client, miraklCreateShopBuilder);
     }
 
+    // used for Netherlands shops
+    public MiraklCreatedShops createBusinessShopForNetherlandsWithUBOs(MiraklMarketplacePlatformOperatorApiClient client, List<Map<String, String>> rows, String legalEntity){
+        MiraklCreateShop miraklCreateShop = new MiraklCreateShop();
+        miraklCreateShop = populateMiraklShopForNetherlands(rows, miraklCreateShop);
+        populateShareHolderDataForNetherlands(legalEntity, rows, miraklCreateShop);
+        populatePaymentInformation(rows, miraklCreateShop);
+        ImmutableList.Builder<MiraklCreateShop> miraklCreateShopBuilder = miraklShopCreateBuilder(miraklCreateShop);
+        return createMiraklShopRequest(client, miraklCreateShopBuilder);
+    }
+
     public MiraklCreatedShops createBusinessShopWithNoUBOs(MiraklMarketplacePlatformOperatorApiClient client, List<Map<String, String>> rows, String legalEntity) {
         MiraklCreateShop miraklCreateShop = new MiraklCreateShop();
         miraklCreateShop = populateMiraklShop(rows, legalEntity, miraklCreateShop);
@@ -70,7 +80,7 @@ public class MiraklShopApi extends MiraklShopProperties {
     }
 
     // Mandatory for any type of shop creation
-    public MiraklCreateShop populateMiraklShop(List<Map<String, String>> rows, String legalEntity, MiraklCreateShop miraklCreateShop){
+    private MiraklCreateShop populateMiraklShop(List<Map<String, String>> rows, String legalEntity, MiraklCreateShop miraklCreateShop){
         populateMiraklAddress(rows, miraklCreateShop);
         populateMiraklProfessionalInformation(miraklCreateShop);
         populateUserEmailAndShopName(miraklCreateShop, rows);
@@ -78,7 +88,15 @@ public class MiraklShopApi extends MiraklShopProperties {
         return miraklCreateShop;
     }
 
-    public MiraklCreatedShops createMiraklShopRequest(MiraklMarketplacePlatformOperatorApiClient client, ImmutableList.Builder<MiraklCreateShop> miraklCreateShopBuilder) {
+    // Mandatory for any type of shop creation for Individual
+    private MiraklCreateShop populateMiraklShopForNetherlands(List<Map<String, String>> rows, MiraklCreateShop miraklCreateShop){
+        populateMiraklAddressForNetherlands(miraklCreateShop);
+        populateMiraklProfessionalInformation(miraklCreateShop);
+        populateUserEmailAndShopName(miraklCreateShop, rows);
+        return miraklCreateShop;
+    }
+
+    private MiraklCreatedShops createMiraklShopRequest(MiraklMarketplacePlatformOperatorApiClient client, ImmutableList.Builder<MiraklCreateShop> miraklCreateShopBuilder) {
         MiraklCreateShopsRequest miraklCreateShopsRequest = new MiraklCreateShopsRequest(miraklCreateShopBuilder.build());
         MiraklCreatedShops shops = client.createShops(miraklCreateShopsRequest);
         throwErrorIfShopIsNotCreated(shops);

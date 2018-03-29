@@ -12,7 +12,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 import com.adyen.constants.ErrorTypeCodes;
-import com.adyen.mirakl.config.MailTemplateService;
 import com.adyen.model.marketpay.ErrorFieldType;
 import com.adyen.model.marketpay.FieldType;
 import com.mirakl.client.mmp.domain.shop.MiraklContactInformation;

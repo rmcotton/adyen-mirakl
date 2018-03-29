@@ -1,9 +1,11 @@
-package com.adyen.mirakl.config;
+package com.adyen.mirakl.service;
 
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+
+import com.adyen.mirakl.service.MailTemplateService;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;

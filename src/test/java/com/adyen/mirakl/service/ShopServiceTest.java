@@ -1,9 +1,38 @@
 package com.adyen.mirakl.service;
 
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import com.adyen.mirakl.service.util.IsoUtil;
+import com.google.common.collect.ImmutableMap;
+import org.assertj.core.api.Assertions;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 import com.adyen.mirakl.startup.MiraklStartupValidator;
 import com.adyen.model.Address;
 import com.adyen.model.Name;
-import com.adyen.model.marketpay.*;
+import com.adyen.model.marketpay.AccountHolderDetails;
+import com.adyen.model.marketpay.BankAccountDetail;
+import com.adyen.model.marketpay.BusinessDetails;
+import com.adyen.model.marketpay.CreateAccountHolderRequest;
+import com.adyen.model.marketpay.CreateAccountHolderResponse;
+import com.adyen.model.marketpay.DeleteBankAccountRequest;
+import com.adyen.model.marketpay.GetAccountHolderResponse;
+import com.adyen.model.marketpay.IndividualDetails;
+import com.adyen.model.marketpay.ShareholderContact;
+import com.adyen.model.marketpay.UpdateAccountHolderRequest;
+import com.adyen.model.marketpay.UpdateAccountHolderResponse;
 import com.adyen.service.Account;
 import com.google.common.collect.ImmutableList;
 import com.mirakl.client.mmp.domain.common.MiraklAdditionalFieldValue;
@@ -14,22 +43,13 @@ import com.mirakl.client.mmp.domain.shop.MiraklShops;
 import com.mirakl.client.mmp.domain.shop.bank.MiraklIbanBankAccountInformation;
 import com.mirakl.client.mmp.operator.core.MiraklMarketplacePlatformOperatorApiClient;
 import com.mirakl.client.mmp.request.shop.MiraklGetShopsRequest;
-import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.*;
-import org.mockito.runners.MockitoJUnitRunner;
-
-import java.time.ZonedDateTime;
-import java.util.*;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ShopServiceTest {
@@ -66,19 +86,13 @@ public class ShopServiceTest {
     private ArgumentCaptor<MiraklGetShopsRequest> miraklGetShopsRequestCaptor;
 
     @Before
-    public void setup(){
-        shopService.setHouseNumberPattern(Pattern.compile("(\\d+)\\D*$"));
+    public void setup() {
+        shopService.setHouseNumberPatterns(ImmutableMap.of("NL", Pattern.compile("\\s([a-zA-Z]*\\d+[a-zA-Z]*)$")));
     }
 
 
     @Test
-    public void testGetIso2CountryCode() {
-        assertEquals("GB", shopService.getIso2CountryCodeFromIso3("GBR"));
-    }
-
-
-    @Test
-    public void testIsIbanChanged() throws Exception {
+    public void testIsIbanChanged() {
 
         MiraklShop shop = new MiraklShop();
         shop.setId("id");
@@ -163,10 +177,10 @@ public class ShopServiceTest {
         assertEquals(Name.GenderEnum.FEMALE, individualDetails.getName().getGender());
 
         final Address address = request.getAccountHolderDetails().getAddress();
-        Assertions.assertThat(address.getHouseNumberOrName()).isEqualTo("2");
+        Assertions.assertThat(address.getHouseNumberOrName()).isEqualTo("610b");
         Assertions.assertThat(address.getPostalCode()).isEqualTo("zipCode");
-        Assertions.assertThat(address.getStreet()).isEqualTo("street 2");
-        Assertions.assertThat(address.getCountry()).isEqualTo("GB");
+        Assertions.assertThat(address.getStreet()).isEqualTo("Kosterpark");
+        Assertions.assertThat(address.getCountry()).isEqualTo("NL");
         Assertions.assertThat(address.getCity()).isEqualTo("city");
 
         final List<BankAccountDetail> bankAccountDetails = request.getAccountHolderDetails().getBankAccountDetails();
@@ -176,7 +190,7 @@ public class ShopServiceTest {
         Assertions.assertThat(bankDetails.getOwnerName()).isEqualTo("owner");
         Assertions.assertThat(bankDetails.getBankBicSwift()).isEqualTo("BIC");
         Assertions.assertThat(bankDetails.getCountryCode()).isEqualTo("GB");
-        Assertions.assertThat(bankDetails.getOwnerHouseNumberOrName()).isEqualTo("2");
+        Assertions.assertThat(bankDetails.getOwnerHouseNumberOrName()).isEqualTo("610b");
         Assertions.assertThat(bankDetails.getIban()).isEqualTo("GB00IBAN");
         Assertions.assertThat(bankDetails.getCurrencyCode()).isEqualTo("EUR");
         Assertions.assertThat(bankDetails.getBankCity()).isEqualTo("bankCity");
@@ -189,8 +203,7 @@ public class ShopServiceTest {
         additionalField.setCode(String.valueOf(MiraklStartupValidator.CustomMiraklFields.ADYEN_LEGAL_ENTITY_TYPE));
         additionalField.setValue(MiraklStartupValidator.AdyenLegalEntityType.BUSINESS.toString());
 
-        final ImmutableList<MiraklAdditionalFieldValue> additionalFields = new ImmutableList.Builder<MiraklAdditionalFieldValue>()
-            .add(additionalField).build();
+        final ImmutableList<MiraklAdditionalFieldValue> additionalFields = new ImmutableList.Builder<MiraklAdditionalFieldValue>().add(additionalField).build();
         setup(additionalFields);
         when(adyenAccountServiceMock.updateAccountHolder(updateAccountHolderRequestCaptor.capture())).thenReturn(updateAccountHolderResponseMock);
         when(getAccountHolderResponseMock.getAccountHolderCode()).thenReturn("alreadyExisting");
@@ -269,8 +282,7 @@ public class ShopServiceTest {
         assertEquals("BIC", request.getAccountHolderDetails().getBankAccountDetails().get(0).getBankBicSwift());
         assertEquals("1111AA", request.getAccountHolderDetails().getBankAccountDetails().get(0).getOwnerPostalCode());
         assertEquals("BIC", request.getAccountHolderDetails().getBankAccountDetails().get(0).getBankBicSwift());
-        assertEquals("2", request.getAccountHolderDetails().getBankAccountDetails().get(0).getOwnerHouseNumberOrName());
-
+        assertEquals("610b", request.getAccountHolderDetails().getBankAccountDetails().get(0).getOwnerHouseNumberOrName());
 
 
         // Update with the same IBAN
@@ -321,12 +333,12 @@ public class ShopServiceTest {
         verify(shareholderMappingService).updateShareholderMapping(createAccountHolderResponseMock);
 
         List<ShareholderContact> shareHolders = createAccountHolderRequestCaptor.getAllValues()
-            .stream()
-            .map(CreateAccountHolderRequest::getAccountHolderDetails)
-            .map(AccountHolderDetails::getBusinessDetails)
-            .map(BusinessDetails::getShareholders)
-            .flatMap(Collection::stream)
-            .collect(Collectors.toList());
+                                                                                .stream()
+                                                                                .map(CreateAccountHolderRequest::getAccountHolderDetails)
+                                                                                .map(AccountHolderDetails::getBusinessDetails)
+                                                                                .map(BusinessDetails::getShareholders)
+                                                                                .flatMap(Collection::stream)
+                                                                                .collect(Collectors.toList());
 
         Assertions.assertThat(shareHolders).containsExactlyInAnyOrder(shareHolderMock1, shareHolderMock2, shareHolderMock3, shareHolderMock4);
 
@@ -346,8 +358,9 @@ public class ShopServiceTest {
         miraklContactInformation.setEmail("email");
         miraklContactInformation.setFirstname("firstName");
         miraklContactInformation.setLastname("lastName");
-        miraklContactInformation.setStreet1("street 2");
+        miraklContactInformation.setStreet1("Kosterpark 610b");
         miraklContactInformation.setZipCode("1111AA");
+        miraklContactInformation.setCountry("NLD");
         miraklContactInformation.setCivility("Mrs");
         return miraklContactInformation;
     }
@@ -365,10 +378,10 @@ public class ShopServiceTest {
         contactInformation.setEmail("email");
         contactInformation.setFirstname("firstName");
         contactInformation.setLastname("lastName");
-        contactInformation.setCountry("GBR");
+        contactInformation.setCountry("NLD");
         contactInformation.setCivility("Mrs");
         contactInformation.setCity("city");
-        contactInformation.setStreet1("street 2");
+        contactInformation.setStreet1("Kosterpark 610b");
         contactInformation.setZipCode("zipCode");
         contactInformation.setState("state");
 
