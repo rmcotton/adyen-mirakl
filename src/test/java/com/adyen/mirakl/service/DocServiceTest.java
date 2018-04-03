@@ -124,4 +124,13 @@ public class DocServiceTest {
 
     }
 
+    @Test
+    public void shouldRemoveShareHolderMedia(){
+
+        docService.removeMiraklMediaForShareHolder("shareHolderCode");
+
+
+
+    }
+
 }

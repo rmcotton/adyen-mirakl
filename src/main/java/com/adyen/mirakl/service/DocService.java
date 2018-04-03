@@ -3,6 +3,9 @@ package com.adyen.mirakl.service;
 import java.time.ZonedDateTime;
 import java.util.*;
 import javax.annotation.Resource;
+
+import com.adyen.mirakl.repository.ShareholderMappingRepository;
+import com.mirakl.client.mmp.request.shop.document.MiraklDeleteShopDocumentRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -39,6 +42,9 @@ public class DocService {
 
     @Resource
     private UboService uboService;
+
+    @Resource
+    private ShareholderMappingRepository shareholderMappingRepository;
 
     /**
      * Calling S30, S31, GetAccountHolder and UploadDocument to upload bankproof documents to Adyen
@@ -143,4 +149,12 @@ public class DocService {
         return null;
     }
 
+    public void removeMiraklMediaForShareHolder(final String shareHolderCode) {
+
+//        shareholderMappingRepository.findOneByMiraklShopIdAndMiraklUboNumber();
+
+        final MiraklDeleteShopDocumentRequest request = new MiraklDeleteShopDocumentRequest("");
+        miraklMarketplacePlatformOperatorApiClient.deleteShopDocument(request);
+
+    }
 }
