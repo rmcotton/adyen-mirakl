@@ -81,6 +81,21 @@ class MiraklUpdateShopProperties extends AbstractMiraklShopSharedProperties {
         return builder;
     }
 
+    ImmutableList.Builder<MiraklSimpleRequestAdditionalFieldValue> addUBOToMiraklShop(List<Map<String, String>> rows) {
+        ImmutableList.Builder<MiraklSimpleRequestAdditionalFieldValue> builder = ImmutableList.builder();
+        rows.forEach(row -> {
+            maxUbos = row.get("UBO");
+            int ubo = Integer.valueOf(maxUbos);
+            Map<Integer, Map<String, String>> uboKeys = uboService.generateMiraklUboKeys(Integer.valueOf(maxUbos));
+            builder.add(createAdditionalField(uboKeys.get(ubo).get(UboService.CIVILITY), civility()));
+            builder.add(createAdditionalField(uboKeys.get(ubo).get(UboService.FIRSTNAME), FAKER.name().firstName()));
+            builder.add(createAdditionalField(uboKeys.get(ubo).get(UboService.LASTNAME), FAKER.name().lastName()));
+            builder.add(createAdditionalField(uboKeys.get(ubo).get(UboService.EMAIL), "adyen-mirakl" + UUID.randomUUID() + "@mailtrap.com"));
+
+        });
+        return builder;
+    }
+
     ImmutableList.Builder<MiraklSimpleRequestAdditionalFieldValue> updateMiraklShopUbosWithInvalidData(List<Map<String, String>> rows) {
         ImmutableList.Builder<MiraklSimpleRequestAdditionalFieldValue> builder = ImmutableList.builder();
         rows.forEach(row -> {

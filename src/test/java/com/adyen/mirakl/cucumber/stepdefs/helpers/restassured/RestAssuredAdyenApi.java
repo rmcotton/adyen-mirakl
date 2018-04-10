@@ -97,12 +97,17 @@ public class RestAssuredAdyenApi {
     public ImmutableList<DocumentContext> extractShareHolderNotifications(List<DocumentContext> notifications, List<String> shareholderCodes) {
         // filter through String List of notifications to see if shareholderCode matches
         // add all that match to list builder
+        Integer counter = 0;
         ImmutableList.Builder<DocumentContext> notificationsBuilder = new ImmutableList.Builder<>();
         for (DocumentContext notification : notifications) {
             if (notification.read("content.shareholderCode") != null) {
                 for (String shareholderCode : shareholderCodes) {
                     if (notification.read("content.shareholderCode").toString().equals(shareholderCode)) {
                         notificationsBuilder.add(notification);
+                        counter++;
+                        if(shareholderCodes.size() == counter){
+                            return notificationsBuilder.build();
+                        }
                     }
                 }
             }

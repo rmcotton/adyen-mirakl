@@ -119,10 +119,13 @@ application:
     emailRetryCron: "0 */10 * * * ?"
     removeSentEmailsCron: "0 0 2 * * ?"
     payoutRetryCron: "0 */10 * * * ?"
+    retryDocsCron: "0 */1 * * * ?"
     initialDeltaDaysBack: 0
     maxPayoutFailed: 10
     houseNumbersRegex:
         NL: "\\s([a-zA-Z]*\\d+[a-zA-Z]*)$"
+    basicUsername: test
+    basicPassword: test
 
 shops:
     shopIds:
@@ -139,6 +142,7 @@ accounts:
 miraklOperator:
     miraklEnvUrl: ${MIRAKL_ENV_URL}
     miraklApiKey: ${MIRAKL_API_OPERATOR_KEY}
+    miraklOperatorEmail: ${MIRAKL_OPERATOR_EMAIL}
 miraklFront:
     miraklEnvUrl: ${MIRAKL_ENV_URL}
     miraklApiKey: ${MIRAKL_API_FRONT_KEY}
@@ -155,8 +159,8 @@ adyenNotificationsConfig:
           description: ${ADYEN_NOTIFY_URL}
           messageFormat: JSON
           notifyURL: ${ADYEN_NOTIFY_URL}
-          notifyUsername: ${ADYEN_NOTIFY_USERNAME}
-          notifyPassword: ${ADYEN_NOTIFY_PASSWORD}
+          notifyUsername: test
+          notifyPassword: test
           sslProtocol: TLSV12
           eventConfigs:
             - eventType: ACCOUNT_CREATED

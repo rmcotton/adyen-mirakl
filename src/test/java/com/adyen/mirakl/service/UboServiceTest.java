@@ -220,6 +220,10 @@ public class UboServiceTest {
         when(shareholderMappingRepositoryMock.findOneByMiraklShopIdAndMiraklUboNumber("shopCode", 2)).thenReturn(Optional.empty());
         when(shareholderMappingRepositoryMock.findOneByMiraklShopIdAndMiraklUboNumber("shopCode", 3)).thenReturn(Optional.empty());
         when(shareholderMappingRepositoryMock.findOneByMiraklShopIdAndMiraklUboNumber("shopCode", 4)).thenReturn(Optional.empty());
+        when(shareholderMappingRepositoryMock.findOneByAdyenShareholderCode("shareholderCode1")).thenReturn(Optional.empty());
+        when(shareholderMappingRepositoryMock.findOneByAdyenShareholderCode("shareholderCode2")).thenReturn(Optional.empty());
+        when(shareholderMappingRepositoryMock.findOneByAdyenShareholderCode("shareholderCode3")).thenReturn(Optional.empty());
+        when(shareholderMappingRepositoryMock.findOneByAdyenShareholderCode("shareholderCode4")).thenReturn(Optional.empty());
 
         when(existingAccountHolderMock.getAccountHolderDetails().getBusinessDetails().getShareholders()).thenReturn(ImmutableList.of(shareholderMock1, shareholderMock2, shareholderMock3, shareholderMock4));
         when(shareholderMock1.getShareholderCode()).thenReturn("shareholderCode1");
