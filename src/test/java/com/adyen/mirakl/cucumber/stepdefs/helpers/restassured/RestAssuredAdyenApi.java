@@ -115,9 +115,9 @@ public class RestAssuredAdyenApi {
         return notificationsBuilder.build();
     }
 
-    public DocumentContext extractCorrectTransferNotification(DocumentContext notification, String liableAccountCode, String accountCode) {
-        if (notification.read("content.sourceAccountCode").equals(accountCode) &&
-            notification.read("content.destinationAccountCode").equals(liableAccountCode)) {
+    public DocumentContext extractCorrectTransferNotification(DocumentContext notification, String sourceAccountCode, String destAccountCode) {
+        if (notification.read("content.sourceAccountCode").equals(sourceAccountCode) &&
+            notification.read("content.destinationAccountCode").equals(destAccountCode)) {
             return notification;
         }
         return null;

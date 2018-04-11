@@ -103,7 +103,8 @@ public class UboService {
                 addShareholderCode(shop, uboNumber, shareholderContact, existingAccountHolder);
                 addMandatoryData(civility, firstName, lastName, email, shareholderContact);
                 addPersonalData(uboNumber, dateOfBirth, nationality, idNumber, shareholderContact);
-                addAddressData(uboNumber, houseNumberOrName, street, city, postalCode, country, shareholderContact, shop.getContactInformation().getCountry());
+                String shopCountry = shop.getContactInformation().getCountry();
+                addAddressData(uboNumber, houseNumberOrName, street, city, postalCode, country, shareholderContact, shopCountry);
                 addPhoneData(uboNumber, phoneCountryCode, phoneType, phoneNumber, shareholderContact);
                 builder.add(shareholderContact);
             }
@@ -290,7 +291,8 @@ public class UboService {
                                 final String city,
                                 final String postalCode,
                                 final String country,
-                                final ShareholderContact shareholderContact, final String contactCountry) {
+                                final ShareholderContact shareholderContact,
+                                final String contactCountry) {
         if (country != null || street != null || houseNumberOrName != null || city != null || postalCode != null) {
             final Address address = new Address();
 

@@ -5,10 +5,8 @@ import com.adyen.mirakl.domain.AdyenPayoutError;
 import com.adyen.mirakl.web.rest.AdyenNotificationResource;
 import com.adyen.mirakl.web.rest.MiraklNotificationsResource;
 import com.adyen.mirakl.web.rest.TestUtil;
-import com.adyen.model.marketpay.Account;
 import com.adyen.model.marketpay.GetAccountHolderResponse;
 import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
@@ -186,6 +184,12 @@ public class AccountPayoutSteps extends StepDefsHelper{
             .isEmpty();
     }
 
+    @And("^balance is transferred from a zero balance account$")
+    public void balanceIsTransferredToANonPayoutAccountHolder(DataTable table) throws Throwable {
+        List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
+        transferAccountHolderBalanceFromAZeroBalanceAccount(cucumberTable, shop);
+    }
+
     @And("^the accountHolder receives balance$")
     public void theAccountHolderReceivesBalance(DataTable table) throws Throwable {
         List<Map<String, String>> cucumberTable = table.getTableConverter().toMaps(table, String.class, String.class);
@@ -196,31 +200,15 @@ public class AccountPayoutSteps extends StepDefsHelper{
     @Then("^(.*) notification will be sent by Adyen$")
     public void TRANSFER_FUNDSNotificationWillBeSentByAdyen(String eventType, String status) throws Throwable {
         waitForNotification();
-        GetAccountHolderResponse response = getGetAccountHolderResponse(shop);
-        String accountCode = response.getAccounts().stream()
-            .map(Account::getAccountCode)
-            .findAny()
-            .orElse(null);
+        String accountCode = retrieveAdyenAccountCode(shop);
+        retrieveAndExtractTransferNotifications(eventType, status, liableAccountCode, accountCode, subscriptionTransferCode);
+    }
 
-        await().untilAsserted(() -> {
-            ImmutableList<DocumentContext> notificationBodies = restAssuredAdyenApi
-                .getMultipleAdyenTransferNotifications(startUpCucumberHook.getBaseRequestBinUrlPath(), eventType, subscriptionTransferCode);
-
-            Assertions.assertThat(notificationBodies).isNotEmpty();
-
-            DocumentContext transferNotification = null;
-            for (DocumentContext notification : notificationBodies) {
-                transferNotification = restAssuredAdyenApi
-                    .extractCorrectTransferNotification(notification, liableAccountCode, accountCode);
-                if (transferNotification != null) {
-                    break;
-                }
-            }
-            Assertions.assertThat(transferNotification).isNotNull();
-            Assertions
-                .assertThat(transferNotification.read("content.status.statusCode").toString())
-                .isEqualTo(status);
-        });
+    @Then("^adyen will send the (.*) notification using the transferCode$")
+    public void adyenWillSendTheTRANSFER_FUNDSNotificationUsingTheTransferCode(String eventType, String status) throws Throwable {
+        waitForNotification();
+        String accountCode = retrieveAdyenAccountCode(shop);
+        adyenNotificationBody = retrieveAndExtractTransferNotifications(eventType, status, zeroBalanceSourceAccountCode, accountCode, transferCode);
     }
 
     @When("^the accountHolders balance is increased beyond the tier level$")

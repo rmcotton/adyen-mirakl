@@ -13,6 +13,7 @@ import com.adyen.model.marketpay.notification.AccountHolderPayoutNotification;
 import com.adyen.model.marketpay.notification.AccountHolderStatusChangeNotification;
 import com.adyen.model.marketpay.notification.AccountHolderVerificationNotification;
 import com.adyen.model.marketpay.notification.GenericNotification;
+import com.adyen.model.marketpay.notification.TransferFundsNotification;
 import com.adyen.notification.NotificationHandler;
 import com.adyen.service.Account;
 import com.adyen.service.exception.ApiException;
@@ -124,6 +125,9 @@ public class AdyenNotificationListener {
         if (genericNotification instanceof AccountHolderPayoutNotification) {
             processAccountHolderPayout((AccountHolderPayoutNotification) genericNotification);
         }
+        if (genericNotification instanceof TransferFundsNotification) {
+            processTransferFunds((TransferFundsNotification) genericNotification);
+        }
     }
 
     private void processAccountholderVerificationNotification(final AccountHolderVerificationNotification verificationNotification) throws Exception {
@@ -212,7 +216,31 @@ public class AdyenNotificationListener {
 
     private void processAccountHolderPayout(final AccountHolderPayoutNotification accountHolderPayoutNotification) {
         if (accountHolderPayoutNotification.getContent().getStatus().getStatusCode().equals("Failed")) {
-            mailTemplateService.sendOperatorEmailPayoutFailure(getShop(accountHolderPayoutNotification.getContent().getAccountHolderCode()), accountHolderPayoutNotification.getContent().getStatus().getMessage());
+            mailTemplateService.sendOperatorEmailPayoutFailure(getShop(accountHolderPayoutNotification.getContent().getAccountHolderCode()),
+                                                               accountHolderPayoutNotification.getContent().getStatus().getMessage());
+        }
+    }
+
+    private void processTransferFunds(final TransferFundsNotification transferFundsNotification) throws Exception {
+        if (transferFundsNotification.getContent().getStatus().getStatusCode().equals("Failed")) {
+
+            // retrieve accountHolderCode from accountCode
+            final GetAccountHolderRequest getAccountHolderSourceRequest = new GetAccountHolderRequest();
+            getAccountHolderSourceRequest.setAccountCode(transferFundsNotification.getContent().getSourceAccountCode());
+            final GetAccountHolderResponse accountHolderSourceResponse = adyenAccountService.getAccountHolder(getAccountHolderSourceRequest);
+
+            final GetAccountHolderRequest getAccountHolderDestinationRequest = new GetAccountHolderRequest();
+            getAccountHolderDestinationRequest.setAccountCode(transferFundsNotification.getContent().getDestinationAccountCode());
+            final GetAccountHolderResponse accountHolderDestinationResponse = adyenAccountService.getAccountHolder(getAccountHolderDestinationRequest);
+
+
+
+
+            mailTemplateService.sendOperatorEmailTransferFundsFailure(accountHolderSourceResponse.getAccountHolderCode(),
+                                                                      accountHolderDestinationResponse.getAccountHolderCode(),
+                                                                      transferFundsNotification.getContent().getAmount(),
+                                                                      transferFundsNotification.getContent().getTransferCode(),
+                                                                      transferFundsNotification.getContent().getStatus().getMessage());
         }
     }
 }

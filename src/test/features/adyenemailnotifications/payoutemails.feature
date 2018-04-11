@@ -1,6 +1,6 @@
-Feature: As an Operator I would like to be notified when a Seller Payout Status is changed so I can take the necessary action
+Feature: Payout emails
 
-    @ADY-25
+    @ADY-25 @ADY-30
     Scenario: Email is sent to seller upon PayoutState set to true
         Given a shop has been created in Mirakl for an Individual with mandatory KYC data
             | city   | bank name | iban                   | bankOwnerName | lastName |
@@ -27,4 +27,22 @@ Feature: As an Operator I would like to be notified when a Seller Payout Status 
         Then a payout email will be sent to the seller
         """
         Payout for your account is no longer allowed
+        """
+
+    Scenario: Transfer funds failed email is sent to operator upon TRANSFER_FUNDS failure notification
+        Given a shop has been created in Mirakl for an Individual with mandatory KYC data
+            | city   | bank name | iban                   | bankOwnerName | lastName |
+            | PASSED | testBank  | GB26TEST40051512347366 | TestData      | TestData |
+        And the connector processes the data and pushes to Adyen
+        And balance is transferred from a zero balance account
+            | transfer amount |
+            | 100             |
+        Then adyen will send the TRANSFER_FUNDS notification using the transferCode
+        """
+        Failed
+        """
+        And the notification is sent to the Connector
+        Then a payout email will be sent to the operator
+        """
+        Transfer funds Failed
         """

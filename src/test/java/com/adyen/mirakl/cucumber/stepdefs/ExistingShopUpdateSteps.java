@@ -62,9 +62,7 @@ public class ExistingShopUpdateSteps extends StepDefsHelper {
         this.miraklShop = getMiraklShop(miraklMarketplacePlatformOperatorApiClient, seller);
         Assertions.assertThat(miraklShop.getId()).isEqualTo(this.seller);
         rows.forEach(row-> {
-            Assertions.assertThat(row.get("firstName")).isEqualTo(miraklShop.getContactInformation().getFirstname());
             Assertions.assertThat(row.get("lastName")).isEqualTo(miraklShop.getContactInformation().getLastname());
-            Assertions.assertThat(row.get("postCode")).isEqualTo(miraklShop.getContactInformation().getZipCode());
             Assertions.assertThat(row.get("city")).isEqualTo(miraklShop.getContactInformation().getCity());
         });
     }

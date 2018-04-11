@@ -17,10 +17,10 @@ Feature: Account Holder Updated notification upon Mirakl shop changes
     @ADY-11
     Scenario: ACCOUNT_HOLDER_UPDATED will not be invoked if no data has been changed
         Given a shop exists in Mirakl with the following fields
-            | seller             | firstName | lastName | postCode | city   |
-            | Samras Supermarket | Test      | Data     | SE1 9BG  | London |
+            | seller       | lastName | city       |
+            | UpdateShop01 | Smith    | Manchester |
         When the Mirakl Shop Details have been updated as the same as before
-            | firstName | lastName | postCode | city   |
-            | Test      | Data     | SE1 9BG  | London |
+            | lastName | city       |
+            | Smith    | Manchester |
         And the connector processes the data and pushes to Adyen
         Then a notification of ACCOUNT_HOLDER_UPDATED will not be sent

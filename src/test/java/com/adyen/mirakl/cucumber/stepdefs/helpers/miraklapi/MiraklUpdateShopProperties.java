@@ -184,15 +184,23 @@ class MiraklUpdateShopProperties extends AbstractMiraklShopSharedProperties {
 
     MiraklShopAddress updateMiraklShopAddress(MiraklShop miraklShop, Map<String, String> row) {
         MiraklShopAddress address = new MiraklShopAddress();
-
-        address.setCity(row.get("city"));
-        address.setCivility(miraklShop.getContactInformation().getCivility());
-        address.setCountry(miraklShop.getContactInformation().getCountry());
-        address.setFirstname(row.get("firstName"));
-        address.setLastname(row.get("lastName"));
-        address.setStreet1(miraklShop.getContactInformation().getStreet1());
-        address.setZipCode(row.get("postCode"));
-
+        if (row.get("firstName") != null) {
+            address.setCity(row.get("city"));
+            address.setCivility(miraklShop.getContactInformation().getCivility());
+            address.setCountry(miraklShop.getContactInformation().getCountry());
+            address.setFirstname(row.get("firstName"));
+            address.setLastname(row.get("lastName"));
+            address.setStreet1(miraklShop.getContactInformation().getStreet1());
+            address.setZipCode(row.get("postCode"));
+        } else {
+            address.setCity(row.get("city"));
+            address.setCivility(miraklShop.getContactInformation().getCivility());
+            address.setCountry(miraklShop.getContactInformation().getCountry());
+            address.setFirstname(miraklShop.getContactInformation().getFirstname());
+            address.setLastname(row.get("lastName"));
+            address.setStreet1(miraklShop.getContactInformation().getStreet1());
+            address.setZipCode(miraklShop.getContactInformation().getZipCode());
+        }
         return address;
     }
 
